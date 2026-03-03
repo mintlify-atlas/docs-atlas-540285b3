@@ -259,9 +259,8 @@ Use the `/process_question_with_key` endpoint to specify a custom Gemini model.
 
 ### Available models
 
-- `gemini-2.0-flash-lite` (default)
-- `gemini-1.5-pro`
-- `gemini-1.5-flash`
+- `gemini-2.0-flash-lite` (default) - Faster responses, lower cost
+- `gemini-2.0-flash` - Balanced speed and accuracy
 
 ### Request examples
 
@@ -269,21 +268,21 @@ Use the `/process_question_with_key` endpoint to specify a custom Gemini model.
 ```bash cURL (text question)
 curl -X POST http://localhost:3000/process_question_with_key \
   -F "apiKey=AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
-  -F "model=gemini-1.5-pro" \
+  -F "model=gemini-2.0-flash" \
   -F "question=What is quantum computing?"
 ```
 
 ```bash cURL (image question)
 curl -X POST http://localhost:3000/process_question_with_key \
   -F "apiKey=AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
-  -F "model=gemini-1.5-pro" \
+  -F "model=gemini-2.0-flash" \
   -F "image=@quiz-screenshot.png"
 ```
 
 ```javascript JavaScript
 const formData = new FormData();
 formData.append('apiKey', 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
-formData.append('model', 'gemini-1.5-pro');
+formData.append('model', 'gemini-2.0-flash');
 formData.append('question', 'What is quantum computing?');
 
 const response = await fetch('http://localhost:3000/process_question_with_key', {
@@ -300,7 +299,7 @@ import requests
 
 data = {
     'apiKey': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    'model': 'gemini-1.5-pro',
+    'model': 'gemini-2.0-flash',
     'question': 'What is quantum computing?'
 }
 
