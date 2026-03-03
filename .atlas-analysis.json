@@ -1,0 +1,101 @@
+{
+  "projectType": "saas",
+  "projectName": "Screen Answerer",
+  "projectDescription": "AI-powered real-time quiz answering tool that monitors your screen and provides instant answers using Google Gemini AI.",
+  "theme": "aspen",
+  "primaryColor": "#6200ee",
+  "lightColor": "#bb86fc",
+  "darkColor": "#3700b3",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/screen-monitoring",
+              "features/question-answering",
+              "features/answer-history",
+              "features/customization"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/api-key-setup",
+              "configuration/model-selection",
+              "configuration/settings"
+            ]
+          },
+          {
+            "group": "Usage Guides",
+            "pages": [
+              "guides/getting-api-key",
+              "guides/using-screen-monitor",
+              "guides/best-practices"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/overview",
+              "api/process-question",
+              "api/monitor-screen",
+              "api/rate-limiting"
+            ]
+          },
+          {
+            "group": "Integration",
+            "pages": [
+              "api/authentication",
+              "api/error-handling",
+              "api/examples"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Help",
+            "pages": [
+              "resources/troubleshooting",
+              "resources/faq",
+              "resources/security"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Real-time screen monitoring for quiz questions",
+    "AI-powered question detection and answering",
+    "Support for multiple Gemini AI models",
+    "Answer history tracking",
+    "Dark and light theme support",
+    "Rate limiting and quota management",
+    "Secure local API key storage",
+    "Image and text question processing"
+  ],
+  "publicApiSurface": [
+    "POST /process_question - Process quiz questions from text or images",
+    "POST /monitor_screen - Monitor screen captures for quiz questions",
+    "POST /process_question_with_key - Process questions with custom API key and model"
+  ]
+}
