@@ -1,0 +1,301 @@
+---
+title: Security
+description: Security features and best practices for Screen Answerer
+---
+
+## Overview
+
+Screen Answerer is designed with security in mind, implementing multiple layers of protection to keep your data safe and secure.
+
+## API key storage
+
+### Local browser storage
+
+Your Gemini API key is stored using the browser's localStorage mechanism:
+
+- **Client-side only:** The API key never leaves your browser except when making direct API calls to Google
+- **No server transmission:** Your API key is never sent to the Screen Answerer server
+- **Persistent storage:** The key remains stored locally between sessions
+- **Origin-isolated:** Only the Screen Answerer application can access the stored key
+
+### Key validation
+
+The application validates your API key format before storage:
+
+```javascript
+// API key must match Gemini format: AIza followed by 35 alphanumeric characters
+/^AIza[0-9A-Za-z_-]{35}$/
+```
+
+Invalid keys are rejected with the error message: `Invalid API key format`
+
+### Best practices for API key security
+
+<Warning>
+  Never share your API key with others or post it publicly. Treat it like a password.
+</Warning>
+
+1. **Keep it private:** Don't share your API key in screenshots, videos, or public forums
+2. **Regenerate if compromised:** If you suspect your key has been exposed, generate a new one in Google AI Studio immediately
+3. **Monitor usage:** Regularly check your API usage in Google AI Studio for unexpected activity
+4. **Use quota limits:** Set quota limits in Google Cloud Console to prevent abuse
+5. **Clear browser data carefully:** Clearing browser data will remove your stored API key
+
+## HTTPS requirements
+
+### Secure connections
+
+For production deployment, Screen Answerer should be served over HTTPS:
+
+- **Data encryption:** All data transmitted between your browser and server is encrypted
+- **Screen capture requirements:** Modern browsers require HTTPS for screen capture APIs
+- **API security:** Google's Gemini API requires secure connections
+
+### Development vs. production
+
+- **Development:** HTTP on localhost is acceptable for testing
+- **Production:** Always use HTTPS with valid SSL/TLS certificates
+- **Mixed content:** Ensure all resources are loaded over HTTPS to avoid browser warnings
+
+## Security headers
+
+### Helmet.js protection
+
+Screen Answerer uses [Helmet.js](https://helmetjs.github.io/) to set secure HTTP headers:
+
+```javascript
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+      fontSrc: ["'self'", "fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "https://generativelanguage.googleapis.com"],
+    },
+  },
+}));
+```
+
+Helmet.js provides protection against common web vulnerabilities:
+
+- **XSS attacks:** Prevents cross-site scripting through CSP headers
+- **Clickjacking:** Sets X-Frame-Options to prevent iframe embedding
+- **MIME sniffing:** Disables content type sniffing
+- **Other headers:** Sets various security headers automatically
+
+### Content Security Policy (CSP)
+
+The application implements a strict Content Security Policy:
+
+#### Default source
+- `'self'` - Only load resources from the same origin
+
+#### Script sources
+- `'self'` - Application scripts
+- `'unsafe-inline'` - Inline scripts (required for functionality)
+- `cdn.jsdelivr.net` - Marked.js library for Markdown parsing
+
+#### Style sources
+- `'self'` - Application styles
+- `'unsafe-inline'` - Inline styles (required for dynamic theming)
+- `fonts.googleapis.com` - Google Fonts CSS
+
+#### Font sources
+- `'self'` - Application fonts
+- `fonts.gstatic.com` - Google Fonts files
+
+#### Image sources
+- `'self'` - Application images
+- `data:` - Data URIs for inline images
+- `blob:` - Blob URLs for screenshots
+
+#### Connect sources
+- `'self'` - API calls to Screen Answerer server
+- `https://generativelanguage.googleapis.com` - Google Gemini API
+
+<Note>
+  The CSP is configured to allow only trusted sources, preventing unauthorized scripts and resources from being loaded.
+</Note>
+
+## Data privacy
+
+### Screenshot handling
+
+Screenshots are handled with privacy in mind:
+
+1. **Capture:** Screenshots are captured in your browser using canvas API
+2. **Transmission:** Sent to Screen Answerer server via secure POST request
+3. **Processing:** Marked as "processing" in the file tracking system
+4. **API call:** Forwarded to Google's Gemini API for analysis
+5. **Deletion:** Immediately deleted from server after processing using `safelyDeleteFile()`
+
+```javascript
+// File deletion happens in finally block to ensure cleanup
+finally {
+  history.markFileProcessed(imagePath);
+  history.safelyDeleteFile(imagePath);
+}
+```
+
+### What data is stored
+
+**Stored locally (in browser):**
+- API key (localStorage)
+- Selected AI model preference (localStorage)
+- Theme preference (localStorage)
+- Questions processed counter (session only)
+
+**Stored on server:**
+- None permanently - all uploads are immediately deleted after processing
+
+**Sent to Google:**
+- Screenshot images (for analysis)
+- Question text (for analysis)
+- API requests are subject to [Google's privacy policy](https://policies.google.com/privacy)
+
+### No data persistence
+
+Screen Answerer does not maintain a database or store:
+- Your questions
+- Your answers
+- Your usage history
+- Your API key
+- Your screenshots
+
+All data is ephemeral and exists only during active processing.
+
+## CORS policy
+
+The server implements CORS (Cross-Origin Resource Sharing):
+
+```javascript
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'X-API-Key']
+}));
+```
+
+- **Open origin:** Currently allows all origins (`*`) for development flexibility
+- **Limited methods:** Only GET and POST requests are allowed
+- **Specific headers:** Only Content-Type and X-API-Key headers are permitted
+
+<Warning>
+  For production deployments, consider restricting the `origin` to your specific domain instead of `*`.
+</Warning>
+
+## Rate limiting
+
+### Protection against abuse
+
+Multiple rate limiting layers protect the application:
+
+#### Global rate limiter
+```javascript
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per window
+});
+```
+
+- **15-minute window:** Limits are calculated over rolling 15-minute periods
+- **100 requests per IP:** Each IP address can make 100 requests per window
+- **Automatic enforcement:** Returns HTTP 429 when exceeded
+
+#### Client-side rate limiting
+```javascript
+const RATE_LIMIT_WINDOW = 5000; // 5 seconds between requests
+```
+
+- **5-second cooldown:** Minimum 5 seconds between API calls per client
+- **IP-based tracking:** Uses client IP to track request timestamps
+- **Protective errors:** Returns rate limit error instead of making API call
+
+#### API quota protection
+```javascript
+const API_CALL_QUOTA_LIMIT = 50; // 50 calls per minute
+const API_CALL_RESET_INTERVAL = 60 * 1000; // Reset every minute
+```
+
+- **Internal counter:** Tracks API calls to prevent quota exhaustion
+- **50 calls per minute:** Protective limit before approaching Google quotas
+- **Automatic reset:** Counter resets every minute
+
+## File upload security
+
+### File validation
+
+Strict file upload controls:
+
+```javascript
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed!'), false);
+  }
+};
+```
+
+- **MIME type checking:** Only image MIME types are accepted
+- **Size limit:** 5MB maximum file size
+- **Extension validation:** Only PNG and JPEG files are processed
+
+### Temporary file handling
+
+- **Unique filenames:** Each upload gets a timestamped unique filename
+- **Dedicated directory:** Files are stored in a temporary uploads directory
+- **Automatic cleanup:** Files are deleted immediately after processing
+- **Error handling:** Files are cleaned up even if processing fails
+
+## Authentication
+
+### API key authentication
+
+Requests to protected endpoints require API key validation:
+
+```javascript
+const apiKey = req.headers['x-api-key'] || req.body.apiKey;
+if (!apiKey) {
+  return res.status(400).json({ error: 'API key is required' });
+}
+```
+
+- **Multiple sources:** API key can be provided in header or body
+- **Format validation:** Key format is validated before use
+- **Direct usage:** Key is used directly with Google's API (never stored server-side)
+
+### No session management
+
+Screen Answerer is stateless:
+- No user accounts
+- No login system
+- No session cookies
+- No user tracking
+
+Each request is independent and authenticated via API key only.
+
+## Best practices
+
+### For users
+
+1. **Use HTTPS:** Always access Screen Answerer over HTTPS in production
+2. **Keep browser updated:** Use the latest version of Chrome or Firefox
+3. **Secure your API key:** Never share your Gemini API key
+4. **Monitor usage:** Regularly check your API usage and quotas
+5. **Clear data when needed:** Clear browser data if using a shared computer
+
+### For developers
+
+1. **Enable HTTPS:** Use SSL/TLS certificates for production deployment
+2. **Restrict CORS:** Limit `origin` to specific domains in production
+3. **Monitor logs:** Check server logs for unusual activity
+4. **Update dependencies:** Keep all npm packages up to date
+5. **Secure the server:** Use firewalls and proper network security
+6. **Environment variables:** Never commit API keys or secrets to version control
+
+## Reporting security issues
+
+If you discover a security vulnerability in Screen Answerer, please report it responsibly by contacting the development team privately before public disclosure.

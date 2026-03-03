@@ -1,0 +1,387 @@
+---
+title: Rate limiting
+description: Understanding API rate limits, quotas, and how to handle rate limit errors
+---
+
+The Screen Answerer API implements multiple layers of rate limiting to prevent abuse, manage server resources, and avoid exhausting your Google Gemini API quota.
+
+## Rate limit layers
+
+The API enforces three distinct rate limiting mechanisms:
+
+### 1. Global IP-based rate limit
+
+**Limit**: 100 requests per 15 minutes per IP address
+
+**Scope**: All endpoints
+
+**Implementation**: Express rate limiter middleware (server.js:47-50)
+
+```javascript
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+```
+
+When exceeded:
+```json
+{
+  "error": "Too many requests from this IP, please try again later"
+}
+```
+
+### 2. Per-client request throttling
+
+**Limit**: 5-second minimum interval between requests
+
+**Scope**: `/monitor_screen` endpoint (server.js:91-102)
+
+**Purpose**: Prevents rapid-fire requests that waste API quota on duplicate screens
+
+```javascript
+const RATE_LIMIT_WINDOW = 5000; // 5 seconds
+
+function isRateLimited(clientId) {
+  const now = Date.now();
+  const lastCallTime = apiCallTimestamps.get(clientId) || 0;
+  
+  if (now - lastCallTime < RATE_LIMIT_WINDOW) {
+    return true; // Rate limited
+  }
+  
+  apiCallTimestamps.set(clientId, now);
+  return false;
+}
+```
+
+When exceeded:
+```json
+{
+  "error": "Rate limit exceeded",
+  "message": "Please wait before sending another request"
+}
+```
+
+### 3. Internal API quota management
+
+**Limit**: 50 API calls per minute to Gemini
+
+**Scope**: All AI processing
+
+**Reset**: Every 60 seconds (server.js:110-112)
+
+```javascript
+let apiCallCounter = 0;
+const API_CALL_QUOTA_LIMIT = 50;
+const API_CALL_RESET_INTERVAL = 60 * 1000; // Reset every minute
+
+setInterval(() => {
+  apiCallCounter = 0;
+}, API_CALL_RESET_INTERVAL);
+```
+
+When approaching limit:
+```json
+{
+  "error": "Failed to process question",
+  "message": "API quota limit approaching, please try again later"
+}
+```
+
+## Rate limit headers
+
+<Warning>
+  The current implementation does not expose rate limit information in response headers. Track your request timing client-side to avoid hitting limits.
+</Warning>
+
+## Handling rate limits
+
+### Client-side throttling
+
+Implement request throttling to stay within limits:
+
+```javascript JavaScript Throttle Function
+class RateLimitedClient {
+  constructor(apiKey, minInterval = 5000) {
+    this.apiKey = apiKey;
+    this.minInterval = minInterval;
+    this.lastRequest = 0;
+  }
+  
+  async processQuestion(question) {
+    // Enforce minimum interval
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequest;
+    
+    if (timeSinceLastRequest < this.minInterval) {
+      const waitTime = this.minInterval - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastRequest = Date.now();
+    
+    const response = await fetch('http://localhost:3000/process_question', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': this.apiKey
+      },
+      body: JSON.stringify({ question })
+    });
+    
+    return await response.json();
+  }
+}
+
+// Usage
+const client = new RateLimitedClient('YOUR_API_KEY', 5000);
+await client.processQuestion('What is 2+2?');
+```
+
+### Retry with exponential backoff
+
+Handle 429 errors with automatic retries:
+
+```javascript JavaScript Retry Logic
+async function processWithRetry(question, maxRetries = 3) {
+  let retries = 0;
+  let delay = 1000; // Start with 1 second
+  
+  while (retries < maxRetries) {
+    try {
+      const response = await fetch('http://localhost:3000/process_question', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        },
+        body: JSON.stringify({ question })
+      });
+      
+      if (response.status === 429) {
+        // Rate limited - retry with backoff
+        retries++;
+        if (retries >= maxRetries) {
+          throw new Error('Rate limit exceeded - max retries reached');
+        }
+        
+        console.log(`Rate limited. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+        continue;
+      }
+      
+      return await response.json();
+    } catch (error) {
+      if (retries >= maxRetries) throw error;
+      retries++;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2;
+    }
+  }
+}
+```
+
+```python Python Retry with Backoff
+import time
+import requests
+from typing import Dict, Any
+
+def process_with_retry(
+    question: str,
+    api_key: str,
+    max_retries: int = 3
+) -> Dict[str, Any]:
+    retries = 0
+    delay = 1  # Start with 1 second
+    
+    while retries < max_retries:
+        try:
+            response = requests.post(
+                'http://localhost:3000/process_question',
+                headers={'X-API-Key': api_key},
+                json={'question': question}
+            )
+            
+            if response.status_code == 429:
+                retries += 1
+                if retries >= max_retries:
+                    raise Exception('Rate limit exceeded - max retries reached')
+                
+                print(f'Rate limited. Retrying in {delay}s...')
+                time.sleep(delay)
+                delay *= 2  # Exponential backoff
+                continue
+            
+            response.raise_for_status()
+            return response.json()
+            
+        except requests.exceptions.RequestException as e:
+            retries += 1
+            if retries >= max_retries:
+                raise e
+            time.sleep(delay)
+            delay *= 2
+    
+    raise Exception('Max retries exceeded')
+```
+
+### Request queuing
+
+For high-volume applications, implement a queue:
+
+```javascript JavaScript Queue System
+class RequestQueue {
+  constructor(apiKey, requestsPerMinute = 50) {
+    this.apiKey = apiKey;
+    this.queue = [];
+    this.processing = false;
+    this.interval = 60000 / requestsPerMinute; // ms per request
+  }
+  
+  async enqueue(question) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ question, resolve, reject });
+      this.processQueue();
+    });
+  }
+  
+  async processQueue() {
+    if (this.processing || this.queue.length === 0) return;
+    
+    this.processing = true;
+    
+    while (this.queue.length > 0) {
+      const { question, resolve, reject } = this.queue.shift();
+      
+      try {
+        const response = await fetch('http://localhost:3000/process_question', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': this.apiKey
+          },
+          body: JSON.stringify({ question })
+        });
+        
+        const data = await response.json();
+        resolve(data);
+      } catch (error) {
+        reject(error);
+      }
+      
+      // Wait before next request
+      if (this.queue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.interval));
+      }
+    }
+    
+    this.processing = false;
+  }
+}
+
+// Usage
+const queue = new RequestQueue('YOUR_API_KEY', 45); // 45 req/min for safety
+await queue.enqueue('What is 2+2?');
+```
+
+## Server-side retry logic
+
+The API includes automatic retry logic for Gemini API calls (server.js:135-170):
+
+```javascript
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
+async function callGeminiAPI(apiCallFn, maxRetries = MAX_RETRIES) {
+  let retries = 0;
+  let delay = INITIAL_RETRY_DELAY;
+  
+  while (true) {
+    try {
+      // Check quota
+      if (isApproachingQuotaLimit()) {
+        throw new Error('API quota limit approaching');
+      }
+      
+      incrementApiCallCounter();
+      return await apiCallFn();
+    } catch (error) {
+      // Retry on rate limit/quota errors
+      if (retries >= maxRetries || 
+          (!error.message.includes('429') && 
+           !error.message.includes('quota') && 
+           !error.message.includes('Resource has been exhausted'))) {
+        throw error;
+      }
+      
+      console.log(`Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      // Exponential backoff with jitter
+      delay = Math.min(delay * 2, 10000) * (0.8 + Math.random() * 0.4);
+      retries++;
+    }
+  }
+}
+```
+
+<Info>
+  The server automatically retries transient errors, so most rate limit issues are handled transparently.
+</Info>
+
+## Monitoring quota usage
+
+Track your Google Gemini API usage:
+
+1. Visit [Google AI Studio](https://aistudio.google.com/)
+2. Navigate to your API key settings
+3. Monitor request counts and quota limits
+
+<Tip>
+  Set up alerts in Google Cloud Console to notify you when approaching quota limits.
+</Tip>
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Use appropriate intervals" icon="clock">
+    For screen monitoring, use 5-second intervals to match the rate limit window
+  </Card>
+  
+  <Card title="Implement client-side throttling" icon="gauge">
+    Don't rely solely on server-side rate limits - throttle requests in your client
+  </Card>
+  
+  <Card title="Handle 429 gracefully" icon="rotate">
+    Always implement retry logic with exponential backoff for rate limit errors
+  </Card>
+  
+  <Card title="Choose the right model" icon="sliders">
+    Use `gemini-2.0-flash-lite` to reduce API quota consumption
+  </Card>
+</CardGroup>
+
+## Testing rate limits
+
+Test your rate limit handling:
+
+```bash Rapid Request Test
+# Send 10 requests rapidly to trigger rate limiting
+for i in {1..10}; do
+  curl -X POST http://localhost:3000/process_question \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: YOUR_API_KEY" \
+    -d '{"question": "Test?"}' &
+done
+wait
+```
+
+Expect to see some 429 responses after the 5-second window.
+
+## Related resources
+
+- [Error Handling](/api/error-handling) - Complete error handling guide
+- [Examples](/api/examples) - Integration examples with rate limiting
+- [Best Practices](/guides/best-practices) - Optimization strategies

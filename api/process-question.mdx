@@ -1,0 +1,250 @@
+---
+title: Process question
+description: Process quiz questions from text or images using AI
+---
+
+The `/process_question` endpoint processes quiz questions from either text input or uploaded images. It uses Google's Gemini AI to analyze the question and provide accurate answers.
+
+## Endpoint
+
+```
+POST /process_question
+```
+
+## Authentication
+
+Requires a valid Gemini API key provided via:
+- **Recommended**: `X-API-Key` header
+- Alternative: `apiKey` in request body
+
+See [Authentication](/api/authentication) for details.
+
+## Request parameters
+
+### Headers
+
+<ParamField path="X-API-Key" type="string" required>
+  Your Google Gemini API key (recommended method)
+</ParamField>
+
+<ParamField path="Content-Type" type="string">
+  - `application/json` for text questions
+  - `multipart/form-data` for image uploads
+</ParamField>
+
+### Body parameters
+
+<ParamField body="question" type="string">
+  The quiz question text (for text-based questions)
+</ParamField>
+
+<ParamField body="image" type="file">
+  Image file containing the quiz question (for image-based questions)
+  
+  **Constraints**:
+  - Maximum size: 5MB
+  - Supported formats: PNG, JPEG
+  - MIME type validation enforced
+</ParamField>
+
+<ParamField body="apiKey" type="string">
+  Your Gemini API key (alternative to header, not recommended)
+</ParamField>
+
+<Note>
+  Provide either `question` (text) or `image` (file), not both.
+</Note>
+
+## Response
+
+<ResponseField name="answers" type="array">
+  Array of answer strings extracted from the AI response
+  
+  Each answer is:
+  - Trimmed of whitespace
+  - Filtered to remove empty lines
+  - Cleaned of markdown formatting (lines starting with `*` or `#`)
+</ResponseField>
+
+## Examples
+
+### Text question
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/process_question \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_GEMINI_API_KEY" \
+  -d '{"question": "What is 2 + 2?"}'
+```
+
+```javascript Fetch API
+const response = await fetch('http://localhost:3000/process_question', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': 'YOUR_GEMINI_API_KEY'
+  },
+  body: JSON.stringify({
+    question: 'What is 2 + 2?'
+  })
+});
+
+const data = await response.json();
+console.log(data.answers); // ["4"]
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'http://localhost:3000/process_question',
+    headers={'X-API-Key': 'YOUR_GEMINI_API_KEY'},
+    json={'question': 'What is 2 + 2?'}
+)
+
+data = response.json()
+print(data['answers'])  # ['4']
+```
+</CodeGroup>
+
+### Image question
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/process_question \
+  -H "X-API-Key: YOUR_GEMINI_API_KEY" \
+  -F "image=@quiz-screenshot.png"
+```
+
+```javascript FormData
+const formData = new FormData();
+formData.append('image', fileInput.files[0]);
+
+const response = await fetch('http://localhost:3000/process_question', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'YOUR_GEMINI_API_KEY'
+  },
+  body: formData
+});
+
+const data = await response.json();
+console.log(data.answers);
+```
+
+```python Python with Files
+import requests
+
+with open('quiz-screenshot.png', 'rb') as f:
+    response = requests.post(
+        'http://localhost:3000/process_question',
+        headers={'X-API-Key': 'YOUR_GEMINI_API_KEY'},
+        files={'image': f}
+    )
+
+data = response.json()
+print(data['answers'])
+```
+</CodeGroup>
+
+### Response format
+
+```json Success Response (200)
+{
+  "answers": [
+    "Paris",
+    "The capital of France is Paris"
+  ]
+}
+```
+
+## Error responses
+
+<Accordion title="400 Bad Request">
+  **Missing required data**
+  ```json
+  {
+    "error": "No question or image provided"
+  }
+  ```
+  
+  **Missing API key**
+  ```json
+  {
+    "error": "API key is required"
+  }
+  ```
+  
+  **Invalid file type** (from multer)
+  ```json
+  {
+    "error": "Only image files are allowed!"
+  }
+  ```
+</Accordion>
+
+<Accordion title="500 Internal Server Error">
+  **Processing failure**
+  ```json
+  {
+    "error": "Failed to process question",
+    "message": "Detailed error message from AI service"
+  }
+  ```
+</Accordion>
+
+## Implementation details
+
+### Text processing (server.js:174-194)
+
+Text questions are processed using this optimized prompt:
+
+```javascript
+const prompt = `Quiz question: "${question}"
+Provide ONLY the correct answer(s). If there are choices, only pick from them. Be extremely concise.`;
+```
+
+### Image processing (server.js:197-231)
+
+Images are:
+1. Converted to base64 format
+2. Sent to Gemini's vision model with MIME type (PNG or JPEG)
+3. Processed with a concise prompt for faster responses
+4. Automatically deleted after processing
+
+### Answer formatting (server.js:297-299)
+
+The API cleans AI responses by:
+1. Splitting on newlines
+2. Trimming whitespace
+3. Filtering empty lines
+4. Removing markdown formatting (lines starting with `*` or `#`)
+
+## Rate limiting
+
+This endpoint is subject to:
+- Global rate limit: 100 requests per 15 minutes per IP
+- Internal quota: 50 API calls per minute
+
+See [Rate Limiting](/api/rate-limiting) for handling strategies.
+
+## Best practices
+
+<Tip>
+  For better performance, use `gemini-2.0-flash-lite` (default model) instead of `gemini-2.0-flash` unless you need higher accuracy.
+</Tip>
+
+<Warning>
+  Uploaded images are temporarily stored and then deleted. Ensure your images don't contain sensitive information beyond the quiz question.
+</Warning>
+
+<Info>
+  The API uses automatic retry logic with exponential backoff for transient errors. See [Error Handling](/api/error-handling) for details.
+</Info>
+
+## Related endpoints
+
+- [Monitor Screen](/api/monitor-screen) - Automatic question detection from screen captures
+- [Authentication](/api/authentication) - API key setup and security
+- [Examples](/api/examples) - Complete integration examples

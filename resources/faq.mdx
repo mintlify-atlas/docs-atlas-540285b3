@@ -1,0 +1,189 @@
+---
+title: FAQ
+description: Frequently asked questions about Screen Answerer
+---
+
+## General questions
+
+<Accordion title="What is Screen Answerer?">
+  Screen Answerer is a web-based tool that uses Google's Gemini AI to automatically detect and answer quiz questions displayed on your screen. It can process both text-based questions and image screenshots to provide instant answers.
+</Accordion>
+
+<Accordion title="How does Screen Answerer work?">
+  Screen Answerer captures screenshots of your screen, sends them to Google's Gemini AI API for analysis, and displays the detected answers in real-time. It uses computer vision to identify quiz questions and natural language processing to determine the correct answers.
+</Accordion>
+
+<Accordion title="Is Screen Answerer free to use?">
+  The Screen Answerer application itself is free, but it requires a Google Gemini API key which may have associated costs depending on your usage. Google offers free tier API access with certain quota limits.
+</Accordion>
+
+## Supported platforms
+
+<Accordion title="Which browsers are supported?">
+  Screen Answerer works best with:
+  - **Google Chrome** (recommended)
+  - **Mozilla Firefox** (recommended)
+  
+  Other browsers may work but are not officially supported. Safari, Edge, and older browsers may have limited functionality, particularly with screen capture features.
+</Accordion>
+
+<Accordion title="Does Screen Answerer work on mobile devices?">
+  Screen Answerer is designed for desktop browsers. Mobile browser support for screen capture APIs is limited, so the monitoring feature may not work on mobile devices. However, you may be able to manually upload screenshots on some mobile browsers.
+</Accordion>
+
+<Accordion title="What operating systems are supported?">
+  Screen Answerer is platform-independent and works on:
+  - Windows
+  - macOS
+  - Linux
+  
+  As long as you're using a supported browser, the application will function on any operating system.
+</Accordion>
+
+## Quiz sites and compatibility
+
+<Accordion title="Which quiz sites does Screen Answerer support?">
+  Screen Answerer is designed to work with any quiz site or platform that displays questions visually on your screen. It doesn't integrate directly with specific quiz platforms but instead analyzes whatever is shown on your screen, including:
+  - Online learning platforms
+  - Testing websites
+  - Educational quiz applications
+  - Any text or image-based questions
+</Accordion>
+
+<Accordion title="Can Screen Answerer handle multiple choice questions?">
+  Yes, Screen Answerer can process multiple choice questions. When analyzing a question with multiple choices, the Gemini AI model will identify the correct answer from the provided options. The application is optimized to return only the correct choice(s).
+</Accordion>
+
+<Accordion title="Does it work with image-based questions?">
+  Yes, Screen Answerer supports both text-based and image-based questions. It can analyze screenshots containing diagrams, charts, images, and other visual content along with the question text.
+</Accordion>
+
+## API and costs
+
+<Accordion title="Do I need my own API key?">
+  Yes, you must provide your own Google Gemini API key. You can obtain a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey). The application stores your API key locally in your browser for security.
+</Accordion>
+
+<Accordion title="How much does the Gemini API cost?">
+  Google offers free tier access to the Gemini API with certain quota limits. Costs vary based on:
+  - The model you choose (flash-lite is faster and uses less quota)
+  - Number of requests
+  - Input/output token usage
+  
+  Check [Google's pricing page](https://ai.google.dev/pricing) for current rates and free tier limits.
+</Accordion>
+
+<Accordion title="What are the API rate limits?">
+  Screen Answerer implements several rate limiting measures:
+  - **Client-side:** 5-second window between requests per user
+  - **Server-side:** 100 requests per 15 minutes per IP address
+  - **Internal quota:** 50 API calls per minute (protective measure)
+  - **Google API limits:** Varies based on your API tier
+  
+  The screen monitoring feature is optimized to stay within these limits, sending requests every 5 seconds by default.
+</Accordion>
+
+<Accordion title="Which AI models are available?">
+  Screen Answerer supports two Gemini models:
+  
+  **gemini-2.0-flash-lite** (Faster)
+  - Optimized for speed and lower quota usage
+  - Best for simple, straightforward questions
+  - Recommended for most users
+  
+  **gemini-2.0-flash** (Balanced)
+  - More thorough analysis
+  - Better for complex questions
+  - Uses more API quota
+  
+  You can switch between models in Settings > Model.
+</Accordion>
+
+## Privacy and security
+
+<Accordion title="Is my data secure?">
+  Yes. Your API key is stored locally in your browser's localStorage and is never sent to the Screen Answerer server. The application communicates directly with Google's Gemini API using your key. Screenshots are temporarily stored on the server for processing and are immediately deleted after analysis.
+</Accordion>
+
+<Accordion title="What happens to my screenshots?">
+  Screenshots are:
+  1. Captured in your browser
+  2. Sent to the Screen Answerer server
+  3. Processed and sent to Google's Gemini API
+  4. Immediately deleted from the server after processing
+  
+  No screenshots are permanently stored by Screen Answerer.
+</Accordion>
+
+<Accordion title="Where is my API key stored?">
+  Your API key is stored in your browser's localStorage, which is:
+  - Stored only on your local machine
+  - Not accessible to other websites
+  - Persistent across browser sessions
+  - Only accessible to the Screen Answerer application
+  
+  The API key is never sent to the Screen Answerer server or any third party except Google's Gemini API.
+</Accordion>
+
+<Accordion title="Can other people see my questions and answers?">
+  No. All processing happens between your browser, the Screen Answerer server, and Google's Gemini API. Other users cannot see your questions or answers. Each session is completely independent.
+</Accordion>
+
+## Technical questions
+
+<Accordion title="Why does the application require screen capture permissions?">
+  Screen capture permissions are required for the monitoring feature to automatically detect quiz questions on your screen. The application uses the browser's `getDisplayMedia()` API to capture screenshots at regular intervals. You can revoke this permission at any time.
+</Accordion>
+
+<Accordion title="How often does screen monitoring capture screenshots?">
+  The screen monitoring feature captures and analyzes screenshots every 5 seconds by default. This interval is optimized to balance responsiveness with API quota usage and rate limiting.
+</Accordion>
+
+<Accordion title="What image formats are supported?">
+  Supported image formats:
+  - PNG (`.png`)
+  - JPEG (`.jpg`, `.jpeg`)
+  
+  Maximum file size: 5MB
+</Accordion>
+
+<Accordion title="Can I use Screen Answerer offline?">
+  No. Screen Answerer requires an internet connection to:
+  - Communicate with Google's Gemini API
+  - Send screenshots for analysis
+  - Receive answers
+  
+  All AI processing happens in the cloud via the Gemini API.
+</Accordion>
+
+<Accordion title="Why is the server running on a different port?">
+  Screen Answerer attempts to start on port 3000 by default. If port 3000 is already in use by another application, the server automatically tries port 3001, then incrementally higher ports until it finds an available one. Check the server console output to see which port is being used.
+</Accordion>
+
+## Usage tips
+
+<Accordion title="How can I get more accurate answers?">
+  To improve answer accuracy:
+  - Ensure questions are clearly visible and in focus
+  - Capture the entire question including all answer choices
+  - Use good lighting if photographing physical materials
+  - Try the gemini-2.0-flash model for complex questions
+  - Make sure text is large enough to read clearly
+</Accordion>
+
+<Accordion title="How can I reduce API costs?">
+  To minimize API usage and costs:
+  - Use the gemini-2.0-flash-lite model (faster and cheaper)
+  - Only monitor when actively taking a quiz
+  - Stop monitoring when not in use
+  - Manually submit questions instead of continuous monitoring
+  - Monitor your quota usage in Google AI Studio
+</Accordion>
+
+<Accordion title="What should I do if I run out of API quota?">
+  If you exceed your API quota:
+  1. Wait for your quota to reset (check Google AI Studio for reset time)
+  2. Consider upgrading to a paid API tier
+  3. Use the application more sparingly
+  4. Switch to the flash-lite model to reduce quota consumption
+</Accordion>

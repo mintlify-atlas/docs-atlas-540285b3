@@ -1,0 +1,276 @@
+---
+title: Answer history
+description: Track, view, and manage quiz answers with real-time display and session counters
+---
+
+Screen Answerer provides real-time answer display and tracking capabilities to help you review quiz questions and monitor your progress throughout a session.
+
+## Answer display
+
+Answers are displayed in two prominent locations in the interface:
+
+### Primary answer section
+
+The main "ANSWER" card (index.html:672) shows the most recent answer detected by screen monitoring:
+
+```html
+<div class="card" id="answerSection">
+    <div class="input-section">
+        <h2>ANSWER</h2>
+        <div id="currentAnswer" class="answer-display">
+            <p>No answer detected yet</p>
+        </div>
+    </div>
+</div>
+```
+
+<Info>
+  The primary answer section updates immediately when a new question is detected, making it easy to see the most recent result at a glance.
+</Info>
+
+### Results history section
+
+The results section (index.html:702) shows all detected answers in chronological order:
+
+```javascript
+// From index.html:1108
+if ((data.detected || data.answers) && (data.answers || []).length > 0) {
+    results.innerHTML = '';
+    const currentAnswer = document.getElementById('currentAnswer');
+    currentAnswer.innerHTML = '';
+    
+    const answersArray = data.answers || [];
+    if (answersArray.length > 0) {
+        // Parse Markdown to HTML
+        const parsedAnswer = marked.parse(answersArray[0]);
+        
+        // Add to results section
+        const answerCard = document.createElement('div');
+        answerCard.className = 'answer-card';
+        answerCard.innerHTML = parsedAnswer;
+        results.appendChild(answerCard);
+    }
+}
+```
+
+## Answer formatting
+
+Answers are rendered with rich Markdown formatting using the marked.js library:
+
+<Accordion title="Supported Markdown features">
+  - **Bold text** for emphasis
+  - *Italic text* for secondary emphasis
+  - Numbered lists for multi-part answers
+  - Bullet points for options
+  - Code blocks for technical answers
+  - Links (if included in AI responses)
+</Accordion>
+
+```javascript
+// Markdown parsing in the UI (index.html:1117)
+const parsedAnswer = marked.parse(answersArray[0]);
+```
+
+## Visual indicators
+
+Answer cards include visual styling to make them easy to identify:
+
+```css
+/* From index.html:426 */
+.answer-card {
+    background-color: var(--card-color);
+    border-left: 4px solid var(--accent-color);
+    color: var(--text-color);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    font-weight: 500;
+    animation: fadeIn 0.5s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+```
+
+<Tip>
+  The purple left border (accent color) helps distinguish answer cards from other UI elements at a glance.
+</Tip>
+
+## Session tracking
+
+Screen Answerer tracks two key metrics during your session:
+
+<CardGroup cols={2}>
+  <Card title="Status" icon="circle-check">
+    Shows whether monitoring is active or inactive
+  </Card>
+  <Card title="Questions processed" icon="hashtag">
+    Counts total questions detected in the current session
+  </Card>
+</CardGroup>
+
+### Status tracking
+
+```javascript
+// From index.html:1057
+function startScreenMonitoring(videoElement, videoTrack, stream) {
+    statusValue.textContent = 'Active';
+    statusValue.style.color = 'var(--success-color)';
+    
+    // When monitoring stops:
+    statusValue.textContent = 'Inactive';
+    statusValue.style.color = 'var(--text-color)';
+}
+```
+
+### Question counter
+
+The questions counter increments each time a quiz question is detected:
+
+```javascript
+// From index.html:1132
+if ((data.detected || data.answers) && (data.answers || []).length > 0) {
+    questionsDetected++;
+    questionsValue.textContent = questionsDetected;
+}
+```
+
+<Warning>
+  The question counter resets when you refresh the page or restart the application. It only tracks questions for the current session.
+</Warning>
+
+## Data persistence
+
+Screen Answerer does not persist answer history between sessions:
+
+<Accordion title="Why isn't history saved?">
+  Answer history is session-only to protect user privacy. Quiz answers are sensitive data that shouldn't be stored without explicit user consent. All answers are cleared when you close or refresh the page.
+</Accordion>
+
+However, your settings **are** persisted using localStorage:
+
+```javascript
+// Settings stored in localStorage (index.html:876)
+localStorage.setItem('geminiApiKey', apiKey);
+localStorage.setItem('geminiModel', selectedModelName);
+localStorage.setItem('theme', theme);
+```
+
+## Answer display animations
+
+New answers appear with a smooth fade-in animation:
+
+```css
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+.answer-card {
+    animation: fadeIn 0.5s;
+}
+```
+
+This provides visual feedback when new questions are detected and answered.
+
+## Status notifications
+
+The monitoring status section provides real-time feedback:
+
+```html
+<!-- From index.html:693 -->
+<div class="monitor-status">
+    <p id="monitorStatus">Monitoring inactive</p>
+</div>
+```
+
+Status messages include:
+- "Monitoring inactive" - When not actively monitoring
+- "Monitoring active - watching for quiz questions" - During active monitoring
+- "Quiz question detected! Answer displayed above." - When an answer is found
+- "Error: [message]" - When issues occur
+
+## Error display
+
+Errors are shown with distinct styling:
+
+```javascript
+// From index.html:1142
+if (error.message.includes('API key')) {
+    showError('Invalid API key. Please check your API key in settings.');
+    monitorStatus.textContent = 'Error: Invalid API key';
+}
+```
+
+```css
+.error-message {
+    color: var(--error-color);
+    font-weight: 500;
+    padding: 12px;
+    border-radius: 4px;
+    background-color: rgba(255, 82, 82, 0.1);
+    border: 1px solid rgba(255, 82, 82, 0.3);
+}
+```
+
+## Managing answer display
+
+### Clearing answers
+
+Currently, answers persist until:
+1. A new question is detected (replaces the previous answer)
+2. You refresh the page (clears all session data)
+3. You stop and restart monitoring
+
+### Answer preview
+
+While monitoring, you'll also see a live preview of captured frames:
+
+```javascript
+// From index.html:1074
+canvas.toBlob(blob => {
+    const imageUrl = URL.createObjectURL(blob);
+    monitorPreview.src = imageUrl;
+    monitorPreview.style.display = 'block';
+}, 'image/png');
+```
+
+This helps you verify that the correct screen area is being captured.
+
+## Best practices
+
+<Steps>
+  <Step title="Review answers immediately">
+    Check the answer display as soon as a question is detected to ensure accuracy.
+  </Step>
+  
+  <Step title="Monitor the counter">
+    Use the questions counter to track how many questions have been processed in your session.
+  </Step>
+  
+  <Step title="Watch for errors">
+    Pay attention to status messages - they'll alert you if something goes wrong with the API or monitoring.
+  </Step>
+  
+  <Step title="Take notes externally">
+    Since history isn't persisted, copy important answers to a separate document if you need them later.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<Accordion title="Answers aren't displaying">
+  Check that monitoring is active (status should show "Active"). Verify your API key is configured correctly in settings. Make sure questions are clearly visible on the captured screen.
+</Accordion>
+
+<Accordion title="Counter not incrementing">
+  The counter only increments when questions are successfully detected and answered. If questions aren't being detected, check the troubleshooting section in the screen monitoring documentation.
+</Accordion>
+
+<Accordion title="Answers disappearing">
+  Each new detected question replaces the previous answer in the display. This is by design to show only the most recent result. The results section shows the answer history during the session.
+</Accordion>

@@ -1,0 +1,139 @@
+---
+title: Authentication
+description: Learn how to authenticate your API requests with Screen Answerer
+---
+
+## Overview
+
+Screen Answerer uses API key authentication to secure access to its endpoints. All API requests require a valid Gemini API key to process questions and images.
+
+## API key requirements
+
+You must provide your own Google Gemini API key to use Screen Answerer. The API key must be in the correct format:
+
+- Format: `AIza[0-9A-Za-z_-]{35}`
+- Example: `AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+<Note>
+Get your free Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+</Note>
+
+## Providing your API key
+
+You can pass your API key in two ways:
+
+### Option 1: HTTP header (recommended)
+
+Include the `X-API-Key` header in your request:
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/process_question \
+  -H "X-API-Key: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -F "image=@screenshot.png"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/process_question', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  },
+  body: formData
+});
+```
+
+```python Python
+import requests
+
+headers = {
+    'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+}
+
+files = {'image': open('screenshot.png', 'rb')}
+
+response = requests.post(
+    'http://localhost:3000/process_question',
+    headers=headers,
+    files=files
+)
+```
+</CodeGroup>
+
+### Option 2: Request body
+
+Include the `apiKey` field in your request body:
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/process_question_with_key \
+  -F "apiKey=AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -F "question=What is 2+2?"
+```
+
+```javascript JavaScript
+const formData = new FormData();
+formData.append('apiKey', 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+formData.append('question', 'What is 2+2?');
+
+const response = await fetch('http://localhost:3000/process_question_with_key', {
+  method: 'POST',
+  body: formData
+});
+```
+</CodeGroup>
+
+## API key validation
+
+Screen Answerer performs validation on your API key:
+
+### Format validation
+
+The API checks that your key matches the expected Gemini API key format. If the format is invalid, you'll receive:
+
+```json
+{
+  "error": "Invalid API key format",
+  "message": "Please provide a valid Gemini API key"
+}
+```
+
+<Warning>
+This validation occurs on the `/process_question_with_key` endpoint at server.js:402
+</Warning>
+
+### Authentication errors
+
+If your API key is rejected by Google's Gemini API during processing, you'll receive:
+
+```json
+{
+  "error": "API key error",
+  "message": "Invalid API key provided. Please check your API key and try again."
+}
+```
+
+This error is returned with HTTP status code `401 Unauthorized`.
+
+## Security best practices
+
+<Note>
+Never commit your API key to version control or expose it in client-side code
+</Note>
+
+- Store your API key in environment variables
+- Use the `X-API-Key` header method for cleaner separation
+- Rotate your API key periodically
+- Monitor your Google Cloud quota usage
+
+## Missing API key
+
+If you don't provide an API key, the API will return:
+
+```json
+{
+  "error": "API key is required"
+}
+```
+
+This error is returned with HTTP status code `400 Bad Request`.

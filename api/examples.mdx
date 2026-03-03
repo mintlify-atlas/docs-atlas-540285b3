@@ -1,0 +1,518 @@
+---
+title: API examples
+description: Real working code examples for common Screen Answerer use cases
+---
+
+## Text question processing
+
+Process a text-based quiz question and get the answer.
+
+### Endpoint
+
+`POST /process_question`
+
+### Request examples
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/process_question \
+  -H "X-API-Key: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is the capital of France?"
+  }'
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch('http://localhost:3000/process_question', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    question: 'What is the capital of France?'
+  })
+});
+
+const data = await response.json();
+console.log('Answer:', data.answers);
+```
+
+```javascript Node.js (axios)
+const axios = require('axios');
+
+const response = await axios.post('http://localhost:3000/process_question', {
+  question: 'What is the capital of France?'
+}, {
+  headers: {
+    'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  }
+});
+
+console.log('Answer:', response.data.answers);
+```
+
+```python Python (requests)
+import requests
+
+response = requests.post(
+    'http://localhost:3000/process_question',
+    headers={'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx'},
+    json={'question': 'What is the capital of France?'}
+)
+
+data = response.json()
+print('Answer:', data['answers'])
+```
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "answers": [
+    "Paris"
+  ]
+}
+```
+
+## Image question processing
+
+Process a screenshot or image containing a quiz question.
+
+### Endpoint
+
+`POST /process_question`
+
+### Request examples
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/process_question \
+  -H "X-API-Key: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -F "image=@quiz-screenshot.png"
+```
+
+```javascript JavaScript (FormData)
+const formData = new FormData();
+const fileInput = document.querySelector('input[type="file"]');
+formData.append('image', fileInput.files[0]);
+
+const response = await fetch('http://localhost:3000/process_question', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  },
+  body: formData
+});
+
+const data = await response.json();
+console.log('Answers:', data.answers);
+```
+
+```javascript Node.js (form-data)
+const FormData = require('form-data');
+const fs = require('fs');
+
+const form = new FormData();
+form.append('image', fs.createReadStream('quiz-screenshot.png'));
+
+const response = await fetch('http://localhost:3000/process_question', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    ...form.getHeaders()
+  },
+  body: form
+});
+
+const data = await response.json();
+console.log('Answers:', data.answers);
+```
+
+```python Python (requests)
+import requests
+
+with open('quiz-screenshot.png', 'rb') as f:
+    files = {'image': f}
+    headers = {'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
+    
+    response = requests.post(
+        'http://localhost:3000/process_question',
+        headers=headers,
+        files=files
+    )
+
+data = response.json()
+print('Answers:', data['answers'])
+```
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "answers": [
+    "Option B",
+    "The answer is 42"
+  ]
+}
+```
+
+<Note>
+Supported image formats: PNG, JPEG. Maximum file size: 5MB (server.js:79)
+</Note>
+
+## Screen monitoring
+
+Automatically detect if a screenshot contains a quiz question and get the answer.
+
+### Endpoint
+
+`POST /monitor_screen`
+
+### How it works
+
+1. Upload a screenshot
+2. Screen Answerer detects if it contains a quiz question (server.js:349)
+3. If detected, it automatically processes and returns the answer
+4. If not detected, returns `detected: false`
+
+### Request examples
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/monitor_screen \
+  -H "X-API-Key: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -F "image=@screen-capture.png"
+```
+
+```javascript JavaScript
+const formData = new FormData();
+formData.append('image', screenshotBlob);
+
+const response = await fetch('http://localhost:3000/monitor_screen', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  },
+  body: formData
+});
+
+const data = await response.json();
+
+if (data.detected) {
+  console.log('Quiz detected! Answers:', data.answers);
+} else {
+  console.log('No quiz question detected');
+}
+```
+
+```python Python
+import requests
+
+with open('screen-capture.png', 'rb') as f:
+    response = requests.post(
+        'http://localhost:3000/monitor_screen',
+        headers={'X-API-Key': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx'},
+        files={'image': f}
+    )
+
+data = response.json()
+
+if data['detected']:
+    print('Quiz detected! Answers:', data['answers'])
+else:
+    print('No quiz question detected')
+```
+</CodeGroup>
+
+### Response (question detected)
+
+```json
+{
+  "detected": true,
+  "answers": [
+    "Option C",
+    "Machine Learning"
+  ]
+}
+```
+
+### Response (no question detected)
+
+```json
+{
+  "detected": false,
+  "message": "No quiz question detected in the image"
+}
+```
+
+## Custom model selection
+
+Use the `/process_question_with_key` endpoint to specify a custom Gemini model.
+
+### Endpoint
+
+`POST /process_question_with_key`
+
+### Available models
+
+- `gemini-2.0-flash-lite` (default)
+- `gemini-1.5-pro`
+- `gemini-1.5-flash`
+
+### Request examples
+
+<CodeGroup>
+```bash cURL (text question)
+curl -X POST http://localhost:3000/process_question_with_key \
+  -F "apiKey=AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -F "model=gemini-1.5-pro" \
+  -F "question=What is quantum computing?"
+```
+
+```bash cURL (image question)
+curl -X POST http://localhost:3000/process_question_with_key \
+  -F "apiKey=AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -F "model=gemini-1.5-pro" \
+  -F "image=@quiz-screenshot.png"
+```
+
+```javascript JavaScript
+const formData = new FormData();
+formData.append('apiKey', 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+formData.append('model', 'gemini-1.5-pro');
+formData.append('question', 'What is quantum computing?');
+
+const response = await fetch('http://localhost:3000/process_question_with_key', {
+  method: 'POST',
+  body: formData
+});
+
+const data = await response.json();
+console.log('Answers:', data.answers);
+```
+
+```python Python
+import requests
+
+data = {
+    'apiKey': 'AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    'model': 'gemini-1.5-pro',
+    'question': 'What is quantum computing?'
+}
+
+response = requests.post(
+    'http://localhost:3000/process_question_with_key',
+    data=data
+)
+
+print('Answers:', response.json()['answers'])
+```
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "answers": [
+    "Quantum computing uses quantum mechanics principles to process information"
+  ]
+}
+```
+
+## Complete integration example
+
+Here's a complete example that handles errors, retries, and different question types.
+
+<CodeGroup>
+```javascript JavaScript
+class ScreenAnswererClient {
+  constructor(apiKey, baseUrl = 'http://localhost:3000') {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+  }
+
+  async processQuestion(question) {
+    const response = await fetch(`${this.baseUrl}/process_question`, {
+      method: 'POST',
+      headers: {
+        'X-API-Key': this.apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ question })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`${error.error}: ${error.message}`);
+    }
+
+    return await response.json();
+  }
+
+  async processImage(imageFile) {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const response = await fetch(`${this.baseUrl}/process_question`, {
+      method: 'POST',
+      headers: {
+        'X-API-Key': this.apiKey
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`${error.error}: ${error.message}`);
+    }
+
+    return await response.json();
+  }
+
+  async monitorScreen(imageFile) {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const response = await fetch(`${this.baseUrl}/monitor_screen`, {
+      method: 'POST',
+      headers: {
+        'X-API-Key': this.apiKey
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`${error.error}: ${error.message}`);
+    }
+
+    return await response.json();
+  }
+}
+
+// Usage
+const client = new ScreenAnswererClient('AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+
+try {
+  // Process text question
+  const textResult = await client.processQuestion('What is 2+2?');
+  console.log('Text answer:', textResult.answers);
+
+  // Process image question
+  const imageFile = document.querySelector('input[type="file"]').files[0];
+  const imageResult = await client.processImage(imageFile);
+  console.log('Image answer:', imageResult.answers);
+
+  // Monitor screen
+  const screenResult = await client.monitorScreen(imageFile);
+  if (screenResult.detected) {
+    console.log('Quiz detected:', screenResult.answers);
+  }
+} catch (error) {
+  console.error('Error:', error.message);
+}
+```
+
+```python Python
+import requests
+import time
+from typing import Optional, List, Dict
+
+class ScreenAnswererClient:
+    def __init__(self, api_key: str, base_url: str = 'http://localhost:3000'):
+        self.api_key = api_key
+        self.base_url = base_url
+        self.headers = {'X-API-Key': api_key}
+
+    def _handle_response(self, response):
+        if not response.ok:
+            error = response.json()
+            raise Exception(f"{error['error']}: {error['message']}")
+        return response.json()
+
+    def process_question(self, question: str) -> Dict:
+        response = requests.post(
+            f'{self.base_url}/process_question',
+            headers=self.headers,
+            json={'question': question}
+        )
+        return self._handle_response(response)
+
+    def process_image(self, image_path: str) -> Dict:
+        with open(image_path, 'rb') as f:
+            files = {'image': f}
+            response = requests.post(
+                f'{self.base_url}/process_question',
+                headers=self.headers,
+                files=files
+            )
+        return self._handle_response(response)
+
+    def monitor_screen(self, image_path: str) -> Dict:
+        with open(image_path, 'rb') as f:
+            files = {'image': f}
+            response = requests.post(
+                f'{self.base_url}/monitor_screen',
+                headers=self.headers,
+                files=files
+            )
+        return self._handle_response(response)
+
+# Usage
+client = ScreenAnswererClient('AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+
+try:
+    # Process text question
+    text_result = client.process_question('What is 2+2?')
+    print('Text answer:', text_result['answers'])
+
+    # Process image question
+    image_result = client.process_image('quiz-screenshot.png')
+    print('Image answer:', image_result['answers'])
+
+    # Monitor screen
+    screen_result = client.monitor_screen('screen-capture.png')
+    if screen_result['detected']:
+        print('Quiz detected:', screen_result['answers'])
+    else:
+        print('No quiz detected')
+except Exception as e:
+    print(f'Error: {e}')
+```
+</CodeGroup>
+
+## Rate limiting considerations
+
+<Warning>
+**Rate limits**
+
+- Per-client: 1 request per 5 seconds (server.js:87)
+- Global: 50 requests per minute (server.js:106)
+- Per-IP: 100 requests per 15 minutes (server.js:48-49)
+
+Implement delays between requests to avoid hitting rate limits.
+</Warning>
+
+<CodeGroup>
+```javascript Delay between requests
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Wait 5 seconds between requests
+await client.processQuestion('Question 1');
+await delay(5000);
+await client.processQuestion('Question 2');
+```
+
+```python Delay between requests
+import time
+
+# Wait 5 seconds between requests
+client.process_question('Question 1')
+time.sleep(5)
+client.process_question('Question 2')
+```
+</CodeGroup>

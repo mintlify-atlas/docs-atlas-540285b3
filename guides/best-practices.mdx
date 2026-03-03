@@ -1,0 +1,376 @@
+---
+title: "Best practices"
+description: "Optimize Screen Answerer for better performance, lower API costs, and improved security"
+---
+
+Follow these best practices to get the most out of Screen Answerer while managing your API quota efficiently and maintaining security.
+
+## API quota management
+
+Managing your Google Gemini API quota is crucial for uninterrupted service, especially on the free tier.
+
+### Understanding quotas
+
+The Gemini API free tier includes:
+
+- **15 requests per minute (RPM)**
+- **1,500 requests per day (RPD)**
+- **4 million tokens per day**
+
+<Info>
+  Screen Answerer's 5-second monitoring interval means you'll make up to 12 requests per minute when actively monitoring. This stays safely under the 15 RPM limit.
+</Info>
+
+### Quota optimization strategies
+
+<AccordionGroup>
+  <Accordion title="Stop monitoring when not in use">
+    The most effective way to preserve quota:
+    
+    - Click **Stop Monitoring** between quizzes
+    - Don't leave monitoring running overnight or during breaks
+    - Only start monitoring right before you expect questions
+    
+    **Impact**: Saves ~720 requests per hour when monitoring is stopped.
+  </Accordion>
+
+  <Accordion title="Use window capture instead of full screen">
+    Capture only the window containing questions:
+    
+    - Reduces image size sent to API
+    - Faster processing times
+    - Better detection accuracy
+    - Lower bandwidth usage
+    
+    **Impact**: ~30-50% reduction in API processing time and token usage.
+  </Accordion>
+
+  <Accordion title="Choose the right model">
+    Use the appropriate model for your needs:
+    
+    - **gemini-2.0-flash-lite** - Best for simple multiple-choice questions, uses fewer tokens
+    - **gemini-2.0-flash** - Better for complex questions, explanations, or calculations
+    
+    **Impact**: Lite model uses approximately 40-60% fewer tokens than flash.
+    
+    <Tip>
+      Start with flash-lite. Only upgrade to flash if you notice accuracy issues with complex questions.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Monitor your usage">
+    Track your API consumption:
+    
+    1. Visit [Google Cloud Console](https://console.cloud.google.com)
+    2. Navigate to **APIs & Services** → **Dashboard**
+    3. Select **Generative Language API**
+    4. View quota usage graphs
+    
+    Set up quota alerts to notify you before hitting limits.
+  </Accordion>
+</AccordionGroup>
+
+## Model selection guidelines
+
+Choosing the right model balances speed, accuracy, and cost.
+
+### When to use gemini-2.0-flash-lite
+
+**Best for**:
+- Multiple-choice questions
+- Simple fact-based questions
+- True/false questions
+- Quick lookups
+- High-frequency monitoring
+
+**Advantages**:
+- Faster response times (200-400ms average)
+- Lower token consumption
+- Higher quota efficiency
+- Suitable for most quiz scenarios
+
+**Example use case**: Monitoring a multiple-choice quiz where you need quick answers to straightforward questions.
+
+### When to use gemini-2.0-flash
+
+**Best for**:
+- Complex problem-solving
+- Mathematical calculations
+- Essay-style questions
+- Questions requiring detailed explanations
+- Technical or specialized topics
+
+**Advantages**:
+- Higher accuracy on complex questions
+- Better reasoning capabilities
+- More detailed responses
+- Superior context understanding
+
+**Example use case**: Technical certification exams with scenario-based questions requiring analysis.
+
+<Note>
+  You can switch models anytime in Settings → Model tab. The change takes effect immediately for the next request.
+</Note>
+
+## Security best practices
+
+Protect your API key and maintain privacy while using Screen Answerer.
+
+### API key security
+
+<Steps>
+  <Step title="Never share your API key">
+    Treat your API key like a password:
+    
+    - Don't post it in forums or chat
+    - Don't commit it to version control
+    - Don't share it with others
+    - Don't include it in screenshots
+  </Step>
+
+  <Step title="Use API restrictions">
+    Add security restrictions in Google Cloud Console:
+    
+    1. Go to **APIs & Services** → **Credentials**
+    2. Click on your API key
+    3. Under **Application restrictions**, select:
+       - **HTTP referrers** and add your domain, OR
+       - **IP addresses** and add your network IP
+    4. Under **API restrictions**, select **Restrict key** and choose only "Generative Language API"
+    
+    <Warning>
+      Application restrictions may interfere with Screen Answerer if configured incorrectly. Test thoroughly after applying restrictions.
+    </Warning>
+  </Step>
+
+  <Step title="Rotate keys regularly">
+    Best practice for long-term security:
+    
+    - Regenerate your API key every 3-6 months
+    - Delete old keys after rotating
+    - Update Screen Answerer immediately with new key
+  </Step>
+
+  <Step title="Monitor for unauthorized usage">
+    Check your API usage regularly:
+    
+    - Look for unexpected spikes
+    - Verify request patterns match your usage
+    - Set up billing alerts if using paid tier
+    - Regenerate key immediately if compromise is suspected
+  </Step>
+</Steps>
+
+### Screen capture privacy
+
+<Warning>
+  Screen monitoring captures everything in the selected area. Be careful about sensitive information.
+</Warning>
+
+**Privacy checklist**:
+
+- ✅ Only capture the window with quiz content
+- ✅ Close sensitive documents before monitoring
+- ✅ Disable notifications that might appear on screen
+- ✅ Use a dedicated browser profile for quizzes
+- ❌ Don't capture your entire screen unnecessarily
+- ❌ Don't monitor when handling confidential information
+- ❌ Don't share your screen capture preview publicly
+
+### Data handling
+
+Understand how your data flows:
+
+1. **Screenshot capture** - Taken locally in your browser
+2. **Transmission** - Sent directly to Google Gemini API (not stored by Screen Answerer)
+3. **Processing** - Analyzed by Google's servers
+4. **Response** - Answer sent back to your browser
+5. **Cleanup** - Screenshot immediately deleted from temporary storage (server.js:229, 269, 310, 341)
+
+<Info>
+  Screen Answerer server acts as a proxy but does not log or store your images. All screenshots are deleted after processing using `history.safelyDeleteFile()` and `history.markFileProcessed()` functions.
+</Info>
+
+## Performance optimization
+
+Improve response times and reduce resource usage.
+
+### Client-side optimizations
+
+<AccordionGroup>
+  <Accordion title="Use a modern browser">
+    Chrome and Firefox offer the best performance:
+    
+    - Native screen capture APIs
+    - Optimized image encoding
+    - Better WebSocket support
+    - Lower CPU overhead
+    
+    **Avoid** older browsers or those with limited screen capture support.
+  </Accordion>
+
+  <Accordion title="Close unnecessary applications">
+    Free up system resources:
+    
+    - Close unused browser tabs
+    - Quit background applications
+    - Disable resource-intensive extensions
+    - Ensure adequate RAM availability
+    
+    **Minimum recommended**: 4GB RAM, modern CPU
+  </Accordion>
+
+  <Accordion title="Optimize capture settings">
+    Select efficient capture options:
+    
+    - **Window capture** over entire screen
+    - Capture at native resolution (don't upscale)
+    - Ensure good lighting for better image quality
+    - Position questions centrally in the window
+  </Accordion>
+</AccordionGroup>
+
+### Network optimization
+
+- **Stable connection** - Use wired Ethernet if possible
+- **Bandwidth** - Minimum 5 Mbps recommended for smooth operation
+- **Latency** - Lower ping to Google servers improves response times
+- **Firewall** - Ensure `generativelanguage.googleapis.com` is not blocked
+
+### Server-side considerations
+
+Screen Answerer includes several performance features:
+
+- **Rate limiting** - 5-second minimum between requests (server.js:87-102)
+- **Retry logic** - Automatic retry with exponential backoff (server.js:135-170)
+- **Quota tracking** - Prevents hitting API limits (server.js:104-122)
+- **Image cleanup** - Immediate deletion of temporary files (server.js:227-230)
+
+<Tip>
+  These features are automatic. You don't need to configure anything, but understanding them helps troubleshoot issues.
+</Tip>
+
+## Error handling
+
+Handle common errors gracefully and know when to retry.
+
+### Rate limit errors
+
+**Error**: "Rate limit exceeded"
+
+**Solutions**:
+1. Wait 5-10 seconds before next action
+2. Reduce monitoring frequency (built-in)
+3. Check if you're running multiple instances
+4. Verify you haven't exceeded daily quota
+
+<Note>
+  Screen Answerer automatically implements retry logic with exponential backoff (server.js:135-170), so most rate limit errors resolve themselves.
+</Note>
+
+### API key errors
+
+**Error**: "Invalid API key" or "API key error"
+
+**Solutions**:
+1. Verify key format (starts with `AIza`, 39 characters total)
+2. Check for extra spaces when copying
+3. Ensure API is enabled in Google Cloud
+4. Try regenerating the key
+5. Confirm billing is set up (even for free tier)
+
+### Detection issues
+
+**Problem**: Questions not being detected
+
+**Solutions**:
+1. Ensure question text is clear and readable
+2. Wait at least 5 seconds after question appears
+3. Try capturing a larger window area
+4. Switch to `gemini-2.0-flash` for better detection
+5. Check image preview to verify capture quality
+
+## Testing and validation
+
+Verify your setup before critical use.
+
+### API key validation
+
+Test your API key:
+
+```bash
+curl -X POST \
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"contents":[{"parts":[{"text":"What is 2+2?"}]}]}'
+```
+
+Expected response should include `"text": "4"` or similar.
+
+### Monitor testing
+
+1. Start monitoring
+2. Display a sample quiz question on screen
+3. Wait 5-10 seconds
+4. Verify answer appears in ANSWER section
+5. Check Questions Processed counter increments
+
+### Performance baseline
+
+**Expected metrics**:
+- **Detection time**: 5-8 seconds from question display
+- **API response**: 200-600ms (flash-lite) or 400-1000ms (flash)
+- **CPU usage**: Less than 10% on modern hardware
+- **Memory**: Less than 100MB additional RAM
+
+<Warning>
+  If metrics significantly exceed these ranges, review the performance optimization section above.
+</Warning>
+
+## Compliance and ethical use
+
+### Academic integrity
+
+<Warning>
+  Using Screen Answerer to cheat on exams or assignments violates academic integrity policies at most institutions. This tool is for educational assistance and study purposes only.
+</Warning>
+
+**Appropriate uses**:
+- Self-study and practice quizzes
+- Tutoring and educational assistance
+- Reviewing quiz answers after completion
+- Learning tool for understanding concepts
+
+**Inappropriate uses**:
+- Cheating on graded exams
+- Academic dishonesty
+- Violating testing policies
+- Circumventing proctored exam systems
+
+### API terms of service
+
+Ensure your use complies with:
+
+- [Google AI Terms of Service](https://ai.google.dev/terms)
+- Your institution's acceptable use policy
+- Local laws regarding automated testing tools
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="API key setup" icon="key" href="/guides/getting-api-key">
+    Get your Google Gemini API key
+  </Card>
+  
+  <Card title="Screen monitoring" icon="display" href="/guides/using-screen-monitor">
+    Start using the screen monitor
+  </Card>
+  
+  <Card title="Model selection" icon="sliders" href="/configuration/model-selection">
+    Choose the right Gemini model
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/resources/troubleshooting">
+    Solve common issues
+  </Card>
+</CardGroup>

@@ -1,0 +1,153 @@
+---
+title: "Getting a Google Gemini API key"
+description: "Step-by-step guide to obtaining your free Google Gemini API key from Google AI Studio"
+---
+
+Screen Answerer requires a Google Gemini API key to analyze questions and generate answers. Follow these steps to get your free API key.
+
+## What you'll need
+
+Before you begin, make sure you have:
+
+- A Google account
+- Access to Google AI Studio
+
+<Info>
+  The Gemini API offers a generous free tier with 15 requests per minute and 1,500 requests per day. Perfect for personal use.
+</Info>
+
+## Step-by-step guide
+
+<Steps>
+  <Step title="Navigate to Google AI Studio">
+    Go to [Google AI Studio](https://aistudio.google.com/app/apikey) in your web browser.
+    
+    You'll be directed to the API key management page.
+  </Step>
+
+  <Step title="Sign in to your Google account">
+    If you're not already signed in, you'll need to authenticate with your Google account.
+    
+    Use the same account you want to associate with the API usage.
+  </Step>
+
+  <Step title="Create a new API key">
+    On the API key page, click the **Create API Key** button.
+    
+    <Note>
+      If this is your first time, you may need to accept Google's terms of service for the Generative AI API.
+    </Note>
+    
+    You'll be prompted to:
+    1. Select an existing Google Cloud project or create a new one
+    2. Click **Create API key in existing project** (or **Create API key in new project**)
+  </Step>
+
+  <Step title="Copy your API key">
+    Once created, your API key will be displayed. It will look something like:
+    
+    ```
+    AIzaSyAbCdEfGhIjKlMnOpQrStUvWxYz1234567
+    ```
+    
+    <Warning>
+      Copy this key immediately! While you can view it again later, it's best to store it securely right away.
+    </Warning>
+    
+    Click the **Copy** icon next to the key to copy it to your clipboard.
+  </Step>
+
+  <Step title="Add the API key to Screen Answerer">
+    Now that you have your API key:
+    
+    1. Open Screen Answerer in your browser
+    2. Click the ⚙️ **Settings** icon in the top right corner
+    3. Select the **API Key** tab
+    4. Paste your API key into the input field
+    5. Click **Save Settings**
+    
+    Screen Answerer will validate your key by making a test request to ensure it works properly.
+    
+    <Tip>
+      Your API key is stored locally in your browser's localStorage and is never sent to Screen Answerer's servers. It's used only for direct API calls to Google's Gemini service.
+    </Tip>
+  </Step>
+</Steps>
+
+## API key format
+
+Valid Gemini API keys follow this format:
+
+- Start with `AIza`
+- Followed by 35 alphanumeric characters, hyphens, or underscores
+- Total length: 39 characters
+
+Example: `AIzaSyAbCdEfGhIjKlMnOpQrStUvWxYz1234567`
+
+<Warning>
+  Screen Answerer validates the format of your API key before saving it. If you see an "Invalid API key format" error, double-check that you copied the entire key correctly.
+</Warning>
+
+## Security best practices
+
+<AccordionGroup>
+  <Accordion title="Keep your API key private">
+    Your API key is like a password. Never share it publicly or commit it to version control. Anyone with access to your key can use your Gemini API quota.
+  </Accordion>
+
+  <Accordion title="Monitor your usage">
+    Visit the [Google Cloud Console](https://console.cloud.google.com) to monitor your API usage and ensure you're staying within the free tier limits.
+  </Accordion>
+
+  <Accordion title="Regenerate if compromised">
+    If you believe your API key has been exposed, go back to Google AI Studio and regenerate it immediately. Remember to update Screen Answerer with the new key.
+  </Accordion>
+
+  <Accordion title="Use API restrictions">
+    For added security, you can restrict your API key to specific websites or IP addresses in the Google Cloud Console. This prevents unauthorized use even if the key is leaked.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### "Invalid API key" error
+
+If Screen Answerer reports an invalid API key:
+
+1. Verify the key format matches the pattern described above
+2. Check for extra spaces or characters when copying
+3. Ensure the API is enabled in your Google Cloud project
+4. Try regenerating the key in Google AI Studio
+
+### "API quota exceeded" error
+
+If you hit quota limits:
+
+1. Wait for the quota to reset (quotas reset every minute/day)
+2. Reduce your monitoring frequency in Screen Answerer
+3. Consider upgrading to a paid plan in Google Cloud if needed
+
+### Test API key manually
+
+You can verify your API key works by making a test request using curl:
+
+```bash
+curl -X POST \
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"contents":[{"parts":[{"text":"Hello"}]}]}'
+```
+
+Replace `YOUR_API_KEY` with your actual key. A successful response confirms the key is valid.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Using screen monitor" icon="display" href="/guides/using-screen-monitor">
+    Learn how to monitor your screen for quiz questions
+  </Card>
+  
+  <Card title="Best practices" icon="star" href="/guides/best-practices">
+    Optimize API usage and improve performance
+  </Card>
+</CardGroup>

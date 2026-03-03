@@ -1,80 +1,244 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Get started with Screen Answerer in under 5 minutes and answer your first quiz question
 ---
 
-## Get started in three steps
+## Get your first answer in 5 minutes
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through setting up Screen Answerer and getting your first quiz answer.
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Get a Gemini API key">
+    Screen Answerer uses Google's Gemini AI to process questions. You'll need a free API key to get started.
+
+    1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+    2. Sign in with your Google account
+    3. Click "Create API Key"
+    4. Copy your new API key (starts with `AIza`)
+
+    <Warning>
+      Keep your API key private. Never share it publicly or commit it to version control.
+    </Warning>
+  </Step>
+
+  <Step title="Start the application">
+    If you haven't installed Screen Answerer yet, see the [installation guide](/installation).
+
+    Start the server:
+
+    <CodeGroup>
+    ```bash npm
+    npm start
+    ```
+
+    ```bash node
+    node server.js
+    ```
+    </CodeGroup>
+
+    The application will start on `http://localhost:3000` (or the next available port if 3000 is in use).
+
+    <Info>
+      The server automatically finds an available port if 3000 is already in use.
+    </Info>
+  </Step>
+
+  <Step title="Configure your API key">
+    Open your browser and navigate to `http://localhost:3000`. You'll see a welcome screen.
+
+    1. Click the ⚙️ settings icon in the top right corner
+    2. Navigate to the "API Key" tab
+    3. Paste your Gemini API key into the input field
+    4. Click "Save Settings"
+
+    The application will validate your key automatically. Once validated, you'll see a success message.
+
+    <Tip>
+      Your API key is stored in your browser's local storage and never sent to any external servers except Google's Gemini API.
+    </Tip>
+  </Step>
+
+  <Step title="Answer your first question">
+    Now you're ready to get answers! You have two options:
+
+    ### Option 1: Real-time screen monitoring
+
+    1. Click "Start Monitoring" in the Screen Monitor section
+    2. Select the screen or window you want to monitor
+    3. When a quiz question appears, Screen Answerer will automatically detect it and display the answer
+
+    ### Option 2: Submit a question directly
+
+    You can also test with a simple text question:
+
+    1. In the question input area (if using a custom frontend)
+    2. Type or paste your quiz question
+    3. Click submit to get your answer
+
+    <Note>
+      Screen monitoring works best in Chrome and Firefox browsers.
+    </Note>
+  </Step>
+</Steps>
+
+## Understanding the interface
+
+### Status dashboard
+
+At the top of the application, you'll see two status cards:
+
+- **Status**: Shows whether monitoring is active or inactive
+- **Questions processed**: Counts how many questions have been detected and answered
+
+### Answer display
+
+The main answer section shows the most recent answer with formatted markdown support, including:
+
+- Bold and italic text
+- Lists and numbered items
+- Code snippets
+- Links and references
+
+### Screen monitor controls
+
+- **Start Monitoring**: Begin real-time screen capture and question detection
+- **Stop Monitoring**: End the monitoring session
+- **Monitor preview**: Shows the current screen capture being analyzed
+
+## Choose your AI model
+
+Screen Answerer supports two Gemini models:
+
+<CardGroup cols={2}>
+  <Card title="Gemini 2.0 Flash Lite" icon="bolt">
+    **Faster** - Best for quick answers and rapid-fire quizzes
+    
+    - Lower latency
+    - Optimized for speed
+    - Default option
+  </Card>
+  <Card title="Gemini 2.0 Flash" icon="sparkles">
+    **Balanced** - Better accuracy for complex questions
+    
+    - Higher accuracy
+    - Better context understanding
+    - Slightly slower
+  </Card>
+</CardGroup>
+
+To change models:
+
+1. Open Settings (⚙️)
+2. Go to the "Model" tab
+3. Use the slider to select your preferred model
+4. Click "Save Settings"
+
+## Testing the API directly
+
+You can also test the API using curl or any HTTP client:
+
+<CodeGroup>
+```bash Text question
+curl -X POST http://localhost:3000/process_question_with_key \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is the capital of France?",
+    "apiKey": "YOUR_API_KEY",
+    "model": "gemini-2.0-flash-lite"
+  }'
+```
+
+```bash Image question
+curl -X POST http://localhost:3000/process_question_with_key \
+  -F "image=@/path/to/question.png" \
+  -F "apiKey=YOUR_API_KEY" \
+  -F "model=gemini-2.0-flash-lite"
+```
+</CodeGroup>
+
+Response format:
+
+```json
+{
+  "answers": [
+    "Paris"
+  ]
+}
+```
+
+## Rate limits and quotas
+
+Screen Answerer includes built-in rate limiting to protect against API quota exhaustion:
+
+- **Per-IP rate limit**: 100 requests per 15 minutes
+- **Request interval**: Minimum 5 seconds between screen monitoring requests
+- **Global quota**: 50 API calls per minute (configurable)
+- **Retry logic**: Automatic exponential backoff on rate limit errors
+
+<Warning>
+  The free tier of Google Gemini API has daily and monthly quotas. Monitor your usage in the [Google AI Studio console](https://aistudio.google.com/).
+</Warning>
+
+## Troubleshooting
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+  <Accordion title="API key validation fails">
+    **Symptoms**: Error message when saving API key
+
+    **Solutions**:
+    - Verify your API key starts with `AIza` and is exactly 39 characters
+    - Check that you copied the entire key without extra spaces
+    - Ensure your API key hasn't been revoked in Google AI Studio
+    - Try generating a new API key
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+
+  <Accordion title="Screen monitoring not working">
+    **Symptoms**: No questions detected during monitoring
+
+    **Solutions**:
+    - Ensure you're using Chrome or Firefox (recommended browsers)
+    - Grant screen capture permissions when prompted
+    - Check that the quiz question is clearly visible in the preview
+    - Verify your API key is configured correctly
+    - Check the browser console for error messages
+  </Accordion>
+
+  <Accordion title="Rate limit errors">
+    **Symptoms**: "Rate limit exceeded" or "429" errors
+
+    **Solutions**:
+    - Wait 5-10 seconds between requests
+    - Reduce monitoring frequency
+    - Check your Gemini API quota in Google AI Studio
+    - Consider upgrading to a paid tier if needed
+  </Accordion>
+
+  <Accordion title="Server won't start">
+    **Symptoms**: Port already in use error
+
+    **Solutions**:
+    - The application automatically tries the next available port
+    - Check the console output for the actual port being used
+    - Manually specify a port: `PORT=3001 npm start`
+    - Kill any processes using port 3000: `lsof -ti:3000 | xargs kill`
   </Accordion>
 </AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card
+    title="Configuration"
+    icon="sliders"
+    href="/configuration/api-key-setup"
+  >
+    Explore advanced settings and customization options
+  </Card>
+  <Card
+    title="API reference"
+    icon="book"
+    href="/api/overview"
+  >
+    Learn about all available API endpoints
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

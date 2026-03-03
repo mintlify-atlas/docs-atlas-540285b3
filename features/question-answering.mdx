@@ -1,0 +1,248 @@
+---
+title: Question answering
+description: Get instant AI-powered answers to quiz questions using text or images with support for multiple Gemini models
+---
+
+Screen Answerer uses Google's Gemini AI models to analyze and answer quiz questions from both text and images with high accuracy.
+
+## Supported question types
+
+Screen Answerer can process questions in two formats:
+
+<CardGroup cols={2}>
+  <Card title="Text questions" icon="text">
+    Direct text input for quick answers to typed or pasted questions
+  </Card>
+  <Card title="Image questions" icon="image">
+    Screenshot or uploaded images containing quiz questions
+  </Card>
+</CardGroup>
+
+## Text question processing
+
+Text questions are sent directly to the Gemini API for processing:
+
+```javascript
+// From server.js:172
+async function processTextQuestion(question, apiKey, modelName = 'gemini-2.0-flash-lite') {
+    const userGenAI = new GoogleGenerativeAI(apiKey);
+    const model = userGenAI.getGenerativeModel({ model: modelName });
+    
+    const prompt = `Quiz question: "${question}"
+Provide ONLY the correct answer(s). If there are choices, only pick from them. Be extremely concise.`;
+    
+    const result = await callGeminiAPI(() => model.generateContent(prompt));
+    return result.response.text();
+}
+```
+
+<Info>
+  The prompt is optimized for concise answers. The AI is instructed to provide only the correct answer without additional explanation.
+</Info>
+
+### Text processing workflow
+
+<Steps>
+  <Step title="Submit question">
+    Send a POST request to `/process_question` with your question text in the request body.
+  </Step>
+  
+  <Step title="API validation">
+    The server validates your API key from the `X-API-Key` header or request body.
+  </Step>
+  
+  <Step title="Generate answer">
+    The Gemini model processes your question and generates a concise answer.
+  </Step>
+  
+  <Step title="Format response">
+    The answer is cleaned and formatted, removing markdown formatting and extra whitespace.
+  </Step>
+</Steps>
+
+## Image question processing
+
+Image questions are processed using Gemini's vision capabilities:
+
+```javascript
+// From server.js:196
+async function processImageQuestion(imagePath, apiKey, modelName = 'gemini-2.0-flash-lite') {
+    const userGenAI = new GoogleGenerativeAI(apiKey);
+    const model = userGenAI.getGenerativeModel({ model: modelName });
+    
+    // Convert image to base64 for API
+    const mimeType = path.extname(imagePath).toLowerCase() === '.png' 
+        ? 'image/png' 
+        : 'image/jpeg';
+    const imagePart = fileToGenerativePart(imagePath, mimeType);
+    
+    const prompt = 'Quiz question image. Identify and provide ONLY the correct answer(s). If there are choices, only pick from them. Be extremely concise.';
+    
+    const result = await callGeminiAPI(() => model.generateContent([prompt, imagePart]));
+    return result.response.text();
+}
+```
+
+### Image format support
+
+Screen Answerer accepts the following image formats:
+
+- **PNG** (.png) - Recommended for screenshots
+- **JPEG** (.jpg, .jpeg) - Supported for photos
+
+<Warning>
+  Images must be under 5MB in size. Larger files will be rejected by the upload middleware (server.js:79).
+</Warning>
+
+## AI model selection
+
+Screen Answerer supports two Gemini models optimized for different use cases:
+
+<Accordion title="gemini-2.0-flash-lite (Faster)">
+  The default model optimized for speed and efficiency. Best for:
+  - Real-time screen monitoring
+  - Quick quiz answers
+  - Minimizing API costs
+  
+  This is the recommended model for most users.
+</Accordion>
+
+<Accordion title="gemini-2.0-flash (Balanced)">
+  A more capable model that may provide better accuracy for complex questions. Use when:
+  - Questions require deeper analysis
+  - You need more detailed answers
+  - Speed is less critical than accuracy
+</Accordion>
+
+You can change the model in the Settings panel under the "Model" tab:
+
+```javascript
+// Model selection is stored in localStorage
+const selectedModel = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-lite';
+```
+
+## Answer formatting
+
+Answers are processed and cleaned before being displayed:
+
+```javascript
+// From server.js:296
+const answers = answer.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && !line.startsWith('*') && !line.startsWith('#'));
+```
+
+This removes:
+- Empty lines
+- Markdown bullet points (`*`)
+- Markdown headers (`#`)
+- Extra whitespace
+
+<Tip>
+  Answers are parsed as Markdown in the UI, so formatting like bold text and lists is preserved for readability.
+</Tip>
+
+## Error handling and retries
+
+Screen Answerer includes robust error handling for API failures:
+
+```javascript
+// From server.js:135
+async function callGeminiAPI(apiCallFn, maxRetries = MAX_RETRIES) {
+    let retries = 0;
+    let delay = INITIAL_RETRY_DELAY;
+    
+    while (true) {
+        try {
+            return await apiCallFn();
+        } catch (error) {
+            if (retries >= maxRetries) {
+                throw error;
+            }
+            
+            // Wait before retrying with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay = Math.min(delay * 2, 10000) * (0.8 + Math.random() * 0.4);
+            retries++;
+        }
+    }
+}
+```
+
+**Retry configuration:**
+- **Max retries**: 3 attempts per request
+- **Initial delay**: 1000ms (1 second)
+- **Exponential backoff**: Doubles each retry, up to 10 seconds
+- **Jitter**: Random 0.8-1.2x multiplier to prevent thundering herd
+
+## API endpoints
+
+### Process text or image question
+
+```http
+POST /process_question
+Content-Type: multipart/form-data
+X-API-Key: your-gemini-api-key
+
+// For text questions:
+{
+  "question": "What is the capital of France?"
+}
+
+// For image questions:
+{
+  "image": <file upload>
+}
+```
+
+### Process with custom model
+
+```http
+POST /process_question_with_key
+Content-Type: application/json
+
+{
+  "question": "Your question text",
+  "apiKey": "your-api-key",
+  "model": "gemini-2.0-flash-lite"
+}
+```
+
+<Info>
+  The `/process_question_with_key` endpoint (server.js:389) allows you to specify both the API key and model in the request body, giving you full control over which model processes your question.
+</Info>
+
+## Security and file handling
+
+Uploaded images are handled securely:
+
+1. **Validation**: Only image MIME types are accepted (server.js:68)
+2. **Size limits**: 5MB maximum file size (server.js:79)
+3. **Unique filenames**: Timestamped to prevent collisions (server.js:62)
+4. **Automatic cleanup**: Files are deleted after processing (server.js:229)
+5. **Reference tracking**: The history module prevents premature deletion
+
+```javascript
+// From server.js:226
+finally {
+    history.markFileProcessed(imagePath);
+    history.safelyDeleteFile(imagePath);
+}
+```
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Use clear images" icon="camera">
+    Ensure quiz questions are clearly visible with good lighting and contrast
+  </Card>
+  <Card title="Choose the right model" icon="sliders">
+    Use flash-lite for speed, flash for accuracy
+  </Card>
+  <Card title="Monitor API usage" icon="chart-line">
+    Check your quota in Google AI Studio to avoid rate limits
+  </Card>
+  <Card title="Keep questions focused" icon="bullseye">
+    Single, clear questions get better answers than complex multi-part questions
+  </Card>
+</CardGroup>

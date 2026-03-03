@@ -1,0 +1,130 @@
+---
+title: Welcome to Screen Answerer
+description: AI-powered quiz answering tool that detects questions from your screen and provides instant answers using Google Gemini AI
+---
+
+<img
+  src="/images/hero.png"
+  alt="Screen Answerer Hero"
+/>
+
+## Get answers to quiz questions instantly
+
+Screen Answerer is an AI-powered application that helps you find answers to quiz questions in real-time. Using Google Gemini AI, it can automatically detect questions from your screen or process text and image-based questions you submit directly.
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get up and running in under 5 minutes
+  </Card>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Install and configure Screen Answerer locally
+  </Card>
+  <Card
+    title="API reference"
+    icon="code"
+    href="/api/overview"
+  >
+    Explore the API endpoints and integration options
+  </Card>
+  <Card
+    title="Configuration"
+    icon="gear"
+    href="/configuration/api-key-setup"
+  >
+    Customize models, themes, and advanced settings
+  </Card>
+</CardGroup>
+
+## Key features
+
+<CardGroup cols={3}>
+  <Card title="Real-time screen monitoring" icon="monitor">
+    Automatically detect quiz questions from your screen capture and get instant answers
+  </Card>
+  <Card title="Multiple input methods" icon="image">
+    Submit questions via text or image upload for flexible usage
+  </Card>
+  <Card title="Multiple AI models" icon="brain">
+    Choose between Gemini 2.0 Flash and Flash Lite for speed vs accuracy
+  </Card>
+  <Card title="Answer history" icon="clock">
+    Track all processed questions with automatic history management
+  </Card>
+  <Card title="Dark and light themes" icon="palette">
+    Switch between themes for comfortable use in any environment
+  </Card>
+  <Card title="Privacy-first" icon="lock">
+    Your API key is stored locally and never sent to our servers
+  </Card>
+</CardGroup>
+
+## How it works
+
+<Steps>
+  <Step title="Set up your API key">
+    Get a free Google Gemini API key and configure it in the application settings. Your key is stored securely in your browser's local storage.
+  </Step>
+  <Step title="Choose your input method">
+    Either enable real-time screen monitoring to automatically detect questions, or submit questions directly via text or image upload.
+  </Step>
+  <Step title="Get instant answers">
+    Screen Answerer processes your question using Google Gemini AI and displays the answer immediately, with support for formatted markdown responses.
+  </Step>
+</Steps>
+
+<Info>
+  Screen Answerer uses the Google Gemini API, which requires a free API key. The application runs entirely on your local machine and uses your own API quota.
+</Info>
+
+## Use cases
+
+**Educational support**
+
+Help students understand quiz questions and learn correct answers with AI-powered explanations.
+
+**Practice and review**
+
+Quickly check answers while practicing for exams or reviewing study materials.
+
+**Accessibility**
+
+Provide instant assistance for users who need help understanding quiz questions in real-time.
+
+## Technology stack
+
+- **Backend**: Node.js with Express server
+- **Frontend**: HTML, CSS, and vanilla JavaScript
+- **AI**: Google Gemini 2.0 Flash and Flash Lite models
+- **Security**: Helmet.js middleware and rate limiting
+- **File handling**: Multer for image uploads
+
+<Note>
+  Screen Answerer is designed as a local-first application. All processing happens on your machine using your own Gemini API key.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick start guide"
+    icon="play"
+    href="/quickstart"
+  >
+    Answer your first quiz question in minutes
+  </Card>
+  <Card
+    title="Installation guide"
+    icon="terminal"
+    href="/installation"
+  >
+    Complete installation and setup instructions
+  </Card>
+</CardGroup>

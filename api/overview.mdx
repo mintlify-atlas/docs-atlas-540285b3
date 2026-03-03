@@ -1,0 +1,137 @@
+---
+title: API overview
+description: Overview of the Screen Answerer REST API for processing quiz questions and screen monitoring
+---
+
+The Screen Answerer API provides endpoints for processing quiz questions using Google's Gemini AI. The API supports both text and image-based questions, screen monitoring, and custom model selection.
+
+## Base URL
+
+When running locally:
+```
+http://localhost:3000
+```
+
+For production deployments, use your configured domain.
+
+## API architecture
+
+The API is built on Node.js with Express and provides three main endpoints:
+
+<CardGroup cols={2}>
+  <Card title="Process Question" icon="circle-question" href="/api/process-question">
+    Process text or image questions with AI
+  </Card>
+  <Card title="Monitor Screen" icon="display" href="/api/monitor-screen">
+    Detect and answer quiz questions from screen captures
+  </Card>
+  <Card title="Rate Limiting" icon="gauge" href="/api/rate-limiting">
+    Understand API rate limits and quotas
+  </Card>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Learn how to authenticate API requests
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Here's a simple example of processing a text question:
+
+```bash cURL
+curl -X POST http://localhost:3000/process_question \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_GEMINI_API_KEY" \
+  -d '{"question": "What is the capital of France?"}'
+```
+
+```json Response
+{
+  "answers": [
+    "Paris"
+  ]
+}
+```
+
+## Authentication
+
+All API endpoints require a valid Google Gemini API key. You can provide it in two ways:
+
+1. **Recommended**: Via the `X-API-Key` header
+2. In the request body as `apiKey` field
+
+See the [Authentication](/api/authentication) page for detailed information.
+
+## Response format
+
+All successful API responses return JSON with an `answers` array:
+
+```json
+{
+  "answers": [
+    "Answer line 1",
+    "Answer line 2"
+  ]
+}
+```
+
+Error responses include an `error` field and optional `message`:
+
+```json
+{
+  "error": "API key is required",
+  "message": "No API key provided in headers or body"
+}
+```
+
+## Rate limiting
+
+The API implements multiple layers of rate limiting to prevent abuse and quota exhaustion:
+
+- **Global limit**: 100 requests per 15 minutes per IP
+- **Per-client limit**: 5-second window between requests
+- **Internal quota**: 50 API calls per minute (resets automatically)
+
+See [Rate Limiting](/api/rate-limiting) for details on handling rate limit errors.
+
+## Model selection
+
+By default, all endpoints use `gemini-2.0-flash-lite` for optimal speed. You can specify a different model using the `/process_question_with_key` endpoint:
+
+```json
+{
+  "apiKey": "YOUR_API_KEY",
+  "question": "Your question",
+  "model": "gemini-2.0-flash"
+}
+```
+
+Available models:
+- `gemini-2.0-flash-lite` (default) - Faster responses, lower cost
+- `gemini-2.0-flash` - Balanced speed and accuracy
+
+## Error handling
+
+The API includes automatic retry logic for transient errors:
+
+- **Maximum retries**: 3 attempts
+- **Retry delay**: Exponential backoff starting at 1000ms
+- **Retryable errors**: Rate limits (429), quota exhaustion, network issues
+
+See [Error Handling](/api/error-handling) for complete error codes and handling strategies.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Process Question Endpoint" icon="message-question" href="/api/process-question">
+    Process text and image questions
+  </Card>
+  <Card title="Screen Monitoring" icon="desktop" href="/api/monitor-screen">
+    Automatically detect quiz questions
+  </Card>
+  <Card title="Integration Examples" icon="code" href="/api/examples">
+    Real code examples in multiple languages
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/api/error-handling">
+    Handle errors and implement retries
+  </Card>
+</CardGroup>

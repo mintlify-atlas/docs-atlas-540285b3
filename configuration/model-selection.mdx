@@ -1,0 +1,271 @@
+---
+title: Model selection
+description: Choose the optimal Gemini model for speed and accuracy when answering quiz questions
+---
+
+## Overview
+
+Screen Answerer supports multiple Google Gemini models, each offering different trade-offs between speed and capability. You can select your preferred model through the settings interface.
+
+<Info>
+  The default model is `gemini-2.0-flash-lite`, optimized for fast responses with good accuracy.
+</Info>
+
+## Available models
+
+Screen Answerer currently supports two Gemini models:
+
+### gemini-2.0-flash-lite (Default)
+
+<Accordion title="Best for: Speed and efficiency">
+  **Characteristics:**
+  - Fastest response times
+  - Lower API quota consumption
+  - Excellent for straightforward quiz questions
+  - Optimized for multiple-choice and simple factual questions
+  
+  **Use cases:**
+  - Real-time screen monitoring
+  - High-frequency question processing
+  - Simple quiz formats
+  - When API quota is a concern
+</Accordion>
+
+From `server.js:173`, this is the default model:
+```javascript
+async function processTextQuestion(question, apiKey, modelName = 'gemini-2.0-flash-lite') {
+  // ...
+  const model = userGenAI.getGenerativeModel({ model: modelName });
+}
+```
+
+### gemini-2.0-flash
+
+<Accordion title="Best for: Balanced performance">
+  **Characteristics:**
+  - Slightly slower than flash-lite
+  - More sophisticated reasoning capabilities
+  - Better context understanding
+  - Higher accuracy on complex questions
+  
+  **Use cases:**
+  - Complex quiz questions with nuance
+  - Questions requiring interpretation
+  - Long-form answers
+  - When accuracy is prioritized over speed
+</Accordion>
+
+## Model selection interface
+
+The model selection uses an intuitive slider interface that makes it easy to switch between models.
+
+### Accessing model settings
+
+<Steps>
+  <Step title="Open settings modal">
+    Click the ⚙️ settings icon in the top-right corner of the application.
+  </Step>
+  
+  <Step title="Navigate to Model tab">
+    Click on the "Model" tab in the settings modal.
+  </Step>
+  
+  <Step title="Adjust the slider">
+    Use the slider to choose between:
+    - **Left position (Faster)**: `gemini-2.0-flash-lite`
+    - **Right position (Balanced)**: `gemini-2.0-flash`
+    
+    The currently selected model is displayed below the slider.
+  </Step>
+  
+  <Step title="Save your selection">
+    Click "Save Settings" at the bottom of the modal to persist your choice.
+  </Step>
+</Steps>
+
+### Slider implementation
+
+From `index.html:809-824`, the slider provides visual feedback:
+
+```javascript
+const modelOptions = [
+  'gemini-2.0-flash-lite',  // Faster
+  'gemini-2.0-flash'       // Balanced
+];
+
+// Model slider change event with improved feedback
+modelSlider.addEventListener('input', function() {
+  const selectedModelName = modelOptions[this.value];
+  selectedModel.textContent = selectedModelName;
+  
+  // Add visual feedback
+  selectedModel.style.opacity = '0.7';
+  setTimeout(() => {
+    selectedModel.style.opacity = '1';
+  }, 150);
+});
+```
+
+## How model selection works
+
+### Storage and persistence
+
+Your model preference is stored in `localStorage` under the key `geminiModel`. This ensures your selection persists across browser sessions.
+
+From `index.html:827-833`:
+```javascript
+// Load saved model preference
+const savedModel = localStorage.getItem('geminiModel');
+if (savedModel) {
+  const modelIndex = modelOptions.indexOf(savedModel);
+  if (modelIndex !== -1) {
+    modelSlider.value = modelIndex;
+    selectedModel.textContent = savedModel;
+  }
+}
+```
+
+### API integration
+
+When processing questions, Screen Answerer sends your selected model to the server:
+
+```javascript
+const selectedModel = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-lite';
+formData.append('model', selectedModel);
+```
+
+The server then uses this model when initializing the Gemini API client (`server.js:429`):
+
+```javascript
+const modelName = req.body.model || 'gemini-2.0-flash-lite';
+```
+
+## Performance comparison
+
+<Note>
+  Performance metrics can vary based on network conditions, question complexity, and API load.
+</Note>
+
+| Feature | gemini-2.0-flash-lite | gemini-2.0-flash |
+|---------|----------------------|------------------|
+| **Response time** | ~1-2 seconds | ~2-4 seconds |
+| **API quota cost** | Lower | Standard |
+| **Simple questions** | Excellent | Excellent |
+| **Complex questions** | Good | Better |
+| **Context awareness** | Good | Better |
+| **Best for** | Speed & efficiency | Accuracy & nuance |
+
+## Optimized prompts
+
+Screen Answerer uses carefully crafted prompts optimized for quick, accurate responses:
+
+### Text questions
+
+From `server.js:184-185`:
+```javascript
+const prompt = `Quiz question: "${question}"
+Provide ONLY the correct answer(s). If there are choices, only pick from them. Be extremely concise.`;
+```
+
+### Image questions
+
+From `server.js:217`:
+```javascript
+const prompt = 'Quiz question image. Identify and provide ONLY the correct answer(s). If there are choices, only pick from them. Be extremely concise.';
+```
+
+<Tip>
+  These concise prompts are designed to minimize response time while maximizing accuracy, regardless of which model you choose.
+</Tip>
+
+## Choosing the right model
+
+### Use gemini-2.0-flash-lite when:
+
+- You're using real-time screen monitoring
+- Questions are straightforward and factual
+- Speed is your top priority
+- You want to conserve API quota
+- Processing high volumes of questions
+
+### Use gemini-2.0-flash when:
+
+- Questions require interpretation or context
+- Dealing with ambiguous phrasing
+- You need higher accuracy on complex topics
+- Speed is less critical
+- Processing fewer, more challenging questions
+
+## Rate limiting and retry logic
+
+Regardless of model selection, Screen Answerer implements robust retry logic to handle API rate limits:
+
+From `server.js:86-102`:
+```javascript
+const RATE_LIMIT_WINDOW = 5000; // 5 seconds between calls
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
+function isRateLimited(clientId) {
+  const now = Date.now();
+  const lastCallTime = apiCallTimestamps.get(clientId) || 0;
+  
+  if (now - lastCallTime < RATE_LIMIT_WINDOW) {
+    return true; // Rate limited
+  }
+  
+  // Update the timestamp for this client
+  apiCallTimestamps.set(clientId, now);
+  return false; // Not rate limited
+}
+```
+
+<Warning>
+  If you experience frequent rate limiting, consider:
+  - Increasing the monitoring interval
+  - Reducing the frequency of manual questions
+  - Using the flash-lite model to reduce quota consumption
+</Warning>
+
+## Testing model performance
+
+To compare model performance for your specific use case:
+
+1. Select `gemini-2.0-flash-lite` and process several questions
+2. Note the response times and accuracy
+3. Switch to `gemini-2.0-flash` and test the same questions
+4. Compare results and choose based on your priorities
+
+<Info>
+  You can change models at any time without affecting your saved API key or other settings.
+</Info>
+
+## Advanced configuration
+
+For developers customizing Screen Answerer, both models support the same API interface:
+
+```javascript
+async function processImageQuestion(imagePath, apiKey, modelName = 'gemini-2.0-flash-lite') {
+  const userGenAI = new GoogleGenerativeAI(apiKey);
+  const model = userGenAI.getGenerativeModel({ model: modelName });
+  
+  const result = await callGeminiAPI(() => 
+    model.generateContent([prompt, imagePart])
+  );
+  return result.response.text();
+}
+```
+
+This consistent interface means you can easily experiment with different models or add support for future Gemini releases.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Settings" icon="sliders" href="/configuration/settings">
+    Customize theme and other preferences
+  </Card>
+  
+  <Card title="API key setup" icon="key" href="/configuration/api-key-setup">
+    Configure your Gemini API credentials
+  </Card>
+</CardGroup>

@@ -1,0 +1,334 @@
+---
+title: Customization
+description: Personalize Screen Answerer with themes, model selection, and configurable settings for your workflow
+---
+
+Screen Answerer offers flexible customization options to tailor the application to your preferences and requirements.
+
+## Settings panel
+
+Access all customization options through the settings panel by clicking the ⚙️ gear icon in the top-right corner.
+
+```html
+<!-- From index.html:591 -->
+<div class="header-controls">
+    <button class="settings-toggle" id="settingsToggle">⚙️</button>
+</div>
+```
+
+The settings panel includes three tabs:
+
+<Steps>
+  <Step title="API Key">
+    Configure your Google Gemini API key for authentication
+  </Step>
+  
+  <Step title="Model">
+    Select which Gemini AI model to use for answering questions
+  </Step>
+  
+  <Step title="Theme">
+    Choose between dark and light visual themes
+  </Step>
+</Steps>
+
+## API key configuration
+
+Your API key is required to use Screen Answerer and is stored securely in your browser's localStorage.
+
+### Adding your API key
+
+<Steps>
+  <Step title="Open settings">
+    Click the ⚙️ icon and navigate to the "API Key" tab
+  </Step>
+  
+  <Step title="Enter your key">
+    Paste your Gemini API key into the input field
+  </Step>
+  
+  <Step title="Save and validate">
+    Click "Save Settings" to validate and store your key
+  </Step>
+</Steps>
+
+```javascript
+// API key validation (index.html:936)
+function validateApiKey(apiKey) {
+    if (!apiKey) {
+        return { valid: false, message: 'Please enter an API key' };
+    }
+    
+    if (!/^AIza[0-9A-Za-z_-]{35}$/.test(apiKey)) {
+        return { valid: false, message: 'Invalid API key format' };
+    }
+    
+    return { valid: true };
+}
+```
+
+<Info>
+  Your API key is validated with a test request before being saved. If validation succeeds, you'll see a success message and can start using the application.
+</Info>
+
+### Getting a Gemini API key
+
+If you don't have an API key yet:
+
+1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy the generated key
+5. Paste it into Screen Answerer's settings
+
+<Warning>
+  Keep your API key private. Never share it publicly or commit it to version control. API usage counts against your Gemini quota.
+</Warning>
+
+### API key storage
+
+```javascript
+// From index.html:876
+localStorage.setItem('geminiApiKey', apiKey);
+
+// Retrieve saved key on page load
+const savedApiKey = localStorage.getItem('geminiApiKey');
+if (savedApiKey) {
+    apiKeyInput.value = savedApiKey;
+}
+```
+
+Your API key is:
+- Stored only in your browser's localStorage
+- Never sent to Screen Answerer's servers
+- Used only for direct API calls to Google's Gemini API
+- Retained between sessions until you clear browser data
+
+## Model selection
+
+Choose between two Gemini models optimized for different use cases:
+
+<CardGroup cols={2}>
+  <Card title="gemini-2.0-flash-lite" icon="bolt">
+    **Faster model**
+    
+    - Optimized for speed
+    - Lower latency responses
+    - Recommended for real-time monitoring
+    - More cost-effective
+  </Card>
+  
+  <Card title="gemini-2.0-flash" icon="balance-scale">
+    **Balanced model**
+    
+    - Better accuracy on complex questions
+    - Slightly slower response times
+    - More capable reasoning
+    - Higher quality answers
+  </Card>
+</CardGroup>
+
+### Changing the model
+
+Use the slider in the "Model" tab to select your preferred model:
+
+```html
+<!-- From index.html:630 -->
+<div class="model-slider-container">
+    <input type="range" min="0" max="1" value="1" class="model-slider" id="modelSlider">
+    <div class="model-labels">
+        <span>Faster</span>
+        <span>Balanced</span>
+    </div>
+    <div class="selected-model" id="selectedModel">gemini-2.0-flash-lite</div>
+</div>
+```
+
+```javascript
+// Model selection logic (index.html:809)
+const modelOptions = [
+    'gemini-2.0-flash-lite',  // Position 0: Faster
+    'gemini-2.0-flash'        // Position 1: Balanced
+];
+
+modelSlider.addEventListener('input', function() {
+    const selectedModelName = modelOptions[this.value];
+    selectedModel.textContent = selectedModelName;
+});
+```
+
+The selected model is saved to localStorage and used for all subsequent API requests:
+
+```javascript
+localStorage.setItem('geminiModel', selectedModelName);
+```
+
+<Tip>
+  Start with gemini-2.0-flash-lite for real-time monitoring. Switch to gemini-2.0-flash if you need more accurate answers for complex questions.
+</Tip>
+
+## Theme customization
+
+Screen Answerer supports both dark and light themes to match your preferences and environment.
+
+### Dark theme (default)
+
+```css
+:root {
+    --primary-color: #f8f9fa;
+    --text-color: #f8f9fa;
+    --background-color: #1a1a2e;
+    --card-color: #2d2d42;
+    --border-color: #3f3f5f;
+    --accent-color: #6200ee;
+}
+```
+
+### Light theme
+
+```css
+.light-theme {
+    --primary-color: #1a1f2b;
+    --text-color: #1a1f2b;
+    --background-color: #f8f9fa;
+    --card-color: #ffffff;
+    --border-color: #e2e8f0;
+    --accent-color: #6200ee;
+}
+```
+
+### Switching themes
+
+Click the theme option in the "Theme" tab:
+
+```javascript
+// From index.html:780
+themeOptions.forEach(option => {
+    option.addEventListener('click', () => {
+        const theme = option.getAttribute('data-theme');
+        
+        if (theme === 'light') {
+            document.body.classList.add('light-theme');
+        } else {
+            document.body.classList.remove('light-theme');
+        }
+        
+        localStorage.setItem('theme', theme);
+    });
+});
+```
+
+Your theme preference is saved and applied automatically on future visits.
+
+## Settings persistence
+
+All settings are stored in localStorage and persist between sessions:
+
+| Setting | Storage Key | Default Value |
+|---------|-------------|---------------|
+| API Key | `geminiApiKey` | None |
+| Model | `geminiModel` | `gemini-2.0-flash-lite` |
+| Theme | `theme` | `dark` |
+
+```javascript
+// Settings are loaded on page load (index.html:899)
+window.addEventListener('load', function() {
+    const savedApiKey = localStorage.getItem('geminiApiKey');
+    const savedModel = localStorage.getItem('geminiModel');
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    
+    // Apply saved settings
+    if (savedApiKey) apiKeyInput.value = savedApiKey;
+    if (savedModel) modelSlider.value = modelOptions.indexOf(savedModel);
+    // Theme is applied automatically
+});
+```
+
+<Accordion title="How do I reset my settings?">
+  Clear your browser's localStorage data for the Screen Answerer domain. This will remove your API key, model preference, and theme selection. You'll need to reconfigure everything on your next visit.
+</Accordion>
+
+## First-time setup
+
+When you first open Screen Answerer without an API key configured, you'll see a welcome message:
+
+```html
+<!-- From index.html:654 -->
+<div id="firstTimeSetup" class="card" style="display: none; border-left: 4px solid var(--warning-color);">
+    <h2>Welcome to Quiz Assistant!</h2>
+    <p>To get started, you need to set up your Google Gemini API key.</p>
+    <p>Click the ⚙️ settings icon in the top right corner to configure your API key.</p>
+    <button id="openSettingsBtn" class="save-settings">Open Settings</button>
+</div>
+```
+
+This guidance ensures new users can quickly get started with the application.
+
+## Advanced customization
+
+### CSS variables
+
+All theme colors use CSS custom properties, making it easy to create custom themes:
+
+```css
+:root {
+    --primary-color: #f8f9fa;
+    --secondary-color: #1a1f2b;
+    --accent-color: #6200ee;        /* Purple accent */
+    --success-color: #bb86fc;       /* Success/active states */
+    --warning-color: #ffb74d;       /* Warnings */
+    --error-color: #ff5252;         /* Errors */
+}
+```
+
+Modify these values in the browser DevTools or create a custom stylesheet to personalize the appearance.
+
+### Rate limiting configuration
+
+Advanced users can modify rate limiting behavior in the server code:
+
+```javascript
+// From server.js:87
+const RATE_LIMIT_WINDOW = 5000; // Milliseconds between requests
+const MAX_RETRIES = 3;          // Retry attempts for failed requests
+const INITIAL_RETRY_DELAY = 1000; // Initial retry delay in ms
+const API_CALL_QUOTA_LIMIT = 50;  // Max API calls per minute
+```
+
+<Warning>
+  Modifying rate limits may result in API quota exhaustion or 429 errors. Only adjust these values if you understand the implications.
+</Warning>
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Secure your API key" icon="lock">
+    Never share your API key or commit it to version control
+  </Card>
+  
+  <Card title="Choose the right model" icon="sliders">
+    Use flash-lite for speed, flash for accuracy
+  </Card>
+  
+  <Card title="Match your environment" icon="palette">
+    Use dark theme in low light, light theme in bright conditions
+  </Card>
+  
+  <Card title="Monitor API usage" icon="chart-line">
+    Check your quota regularly in Google AI Studio
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="Settings won't save">
+  Check that your browser allows localStorage for the Screen Answerer domain. Some privacy extensions or browser modes (like private/incognito) may block localStorage.
+</Accordion>
+
+<Accordion title="API key validation fails">
+  Ensure your API key follows the correct format (AIza followed by 35 alphanumeric characters, hyphens, or underscores). Test the key in Google AI Studio to verify it's valid.
+</Accordion>
+
+<Accordion title="Theme not applying">
+  Try clearing your browser cache and reloading the page. If the issue persists, check the browser console for JavaScript errors.
+</Accordion>

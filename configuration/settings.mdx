@@ -1,0 +1,460 @@
+---
+title: Settings
+description: Customize your Screen Answerer experience with theme selection and application preferences
+---
+
+## Overview
+
+Screen Answerer provides a comprehensive settings interface that allows you to configure API keys, select AI models, and customize the visual appearance of the application.
+
+<Info>
+  All settings are stored locally in your browser using `localStorage`, ensuring your preferences persist across sessions.
+</Info>
+
+## Accessing settings
+
+The settings modal can be accessed in multiple ways:
+
+<Steps>
+  <Step title="Via settings icon">
+    Click the ⚙️ icon in the top-right corner of the application header.
+  </Step>
+  
+  <Step title="Via welcome message">
+    On first launch, click the "Open Settings" button in the welcome card.
+  </Step>
+  
+  <Step title="Via keyboard (future)">
+    Keyboard shortcuts may be added in future versions for quick access.
+  </Step>
+</Steps>
+
+## Settings modal structure
+
+The settings modal is organized into three tabs for easy navigation:
+
+### Tab navigation
+
+From `index.html:602-606`, the settings use a tabbed interface:
+
+```html
+<div class="settings-tabs">
+  <button class="settings-tab active" data-tab="apiKey">API Key</button>
+  <button class="settings-tab" data-tab="model">Model</button>
+  <button class="settings-tab" data-tab="theme">Theme</button>
+</div>
+```
+
+<Tip>
+  Click any tab to instantly switch between different configuration sections without losing unsaved changes.
+</Tip>
+
+## API Key tab
+
+The API Key tab allows you to configure your Google Gemini API credentials.
+
+### Features
+
+<Accordion title="API key input field">
+  A secure text input where you paste your Gemini API key. The field shows a placeholder: "Enter your Gemini API Key".
+  
+  From `index.html:610`:
+  ```html
+  <input type="text" id="apiKeyInput" class="api-key-input" 
+         placeholder="Enter your Gemini API Key">
+  ```
+</Accordion>
+
+<Accordion title="Privacy notice">
+  A clear message explaining data handling: "Your API key is stored locally in your browser and never sent to our servers."
+  
+  This transparency helps users understand that their credentials are kept private.
+</Accordion>
+
+<Accordion title="Setup instructions">
+  Step-by-step guidance with a direct link to [Google AI Studio](https://aistudio.google.com/app/apikey):
+  
+  1. Go to Google AI Studio
+  2. Create a free API key
+  3. Copy and paste it here
+</Accordion>
+
+<Accordion title="Validation status">
+  Real-time feedback showing whether your API key is valid:
+  - Success: "✅ API key validated and saved successfully!"
+  - Error: "❌ Error: [error message]"
+  
+  From `index.html:877-878`:
+  ```javascript
+  apiKeyStatus.textContent = '✅ API key validated and saved successfully!';
+  apiKeyStatus.className = 'api-key-status success';
+  ```
+</Accordion>
+
+<Warning>
+  Keep your API key private. The settings include a warning: "Note: Keep your API key private. Using this app will count against your Gemini API quota."
+</Warning>
+
+### Validation process
+
+When you save your API key, Screen Answerer performs comprehensive validation:
+
+```javascript
+// Format validation
+if (!/^AIza[0-9A-Za-z_-]{35}$/.test(req.body.apiKey)) {
+  return res.status(400).json({ 
+    error: 'Invalid API key format', 
+    message: 'Please provide a valid Gemini API key' 
+  });
+}
+```
+
+Then it tests the key with an actual API call to ensure it works:
+
+```javascript
+const response = await fetch('/process_question_with_key', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    question: 'Test question',
+    apiKey: apiKey,
+    model: selectedModelName
+  })
+});
+```
+
+## Model tab
+
+The Model tab provides an intuitive interface for selecting your preferred Gemini AI model.
+
+### Model slider
+
+<Accordion title="Slider interface">
+  A horizontal slider with two positions:
+  - **Left (0)**: "Faster" - `gemini-2.0-flash-lite`
+  - **Right (1)**: "Balanced" - `gemini-2.0-flash`
+  
+  From `index.html:628-637`:
+  ```html
+  <div class="model-slider-container">
+    <input type="range" min="0" max="1" value="1" 
+           class="model-slider" id="modelSlider">
+    <div class="model-labels">
+      <span>Faster</span>
+      <span>Balanced</span>
+    </div>
+    <div class="selected-model" id="selectedModel">gemini-2.0-flash-lite</div>
+  </div>
+  ```
+</Accordion>
+
+### Visual feedback
+
+The slider provides immediate visual feedback when you change models:
+
+```javascript
+modelSlider.addEventListener('input', function() {
+  const selectedModelName = modelOptions[this.value];
+  selectedModel.textContent = selectedModelName;
+  
+  // Add visual feedback
+  selectedModel.style.opacity = '0.7';
+  setTimeout(() => {
+    selectedModel.style.opacity = '1';
+  }, 150);
+});
+```
+
+<Info>
+  The currently selected model is displayed in monospace font below the slider for clear identification.
+</Info>
+
+## Theme tab
+
+Customize the visual appearance of Screen Answerer with theme options.
+
+### Available themes
+
+<Accordion title="Dark theme (default)">
+  A dark color scheme optimized for low-light environments and reduced eye strain:
+  
+  **Colors:**
+  - Background: `#1a1a2e`
+  - Card: `#2d2d42`
+  - Text: `#f8f9fa`
+  - Accent: `#6200ee`
+  
+  From `index.html:9-20`:
+  ```css
+  :root {
+    --primary-color: #f8f9fa;
+    --secondary-color: #1a1f2b;
+    --accent-color: #6200ee;
+    --text-color: #f8f9fa;
+    --background-color: #1a1a2e;
+    --card-color: #2d2d42;
+    --border-color: #3f3f5f;
+  }
+  ```
+</Accordion>
+
+<Accordion title="Light theme">
+  A bright, clean color scheme ideal for well-lit environments:
+  
+  **Colors:**
+  - Background: `#f8f9fa`
+  - Card: `#ffffff`
+  - Text: `#1a1f2b`
+  - Accent: `#6200ee`
+  
+  From `index.html:22-30`:
+  ```css
+  .light-theme {
+    --primary-color: #1a1f2b;
+    --secondary-color: #f8f9fa;
+    --accent-color: #6200ee;
+    --text-color: #1a1f2b;
+    --background-color: #f8f9fa;
+    --card-color: #ffffff;
+    --border-color: #e2e8f0;
+  }
+  ```
+</Accordion>
+
+### Theme selection
+
+Switching themes is simple and provides instant visual feedback:
+
+<Steps>
+  <Step title="Click theme option">
+    Click either "Dark" or "Light" in the theme options.
+  </Step>
+  
+  <Step title="Instant preview">
+    The application immediately applies the new theme.
+  </Step>
+  
+  <Step title="Auto-save">
+    Your preference is automatically saved to `localStorage`.
+  </Step>
+</Steps>
+
+Implementation from `index.html:780-798`:
+
+```javascript
+themeOptions.forEach(option => {
+  option.addEventListener('click', () => {
+    // Remove active class from all options
+    themeOptions.forEach(opt => opt.classList.remove('active'));
+    
+    // Add active class to clicked option
+    option.classList.add('active');
+    
+    // Apply theme
+    const theme = option.getAttribute('data-theme');
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+    
+    // Save theme preference
+    localStorage.setItem('theme', theme);
+  });
+});
+```
+
+<Tip>
+  Theme changes take effect immediately without requiring a page reload or clicking "Save Settings".
+</Tip>
+
+## Saving settings
+
+The "Save Settings" button at the bottom of the modal handles validation and persistence.
+
+### Save behavior
+
+<Steps>
+  <Step title="Validation">
+    Validates API key format and tests it with a real request to Gemini API.
+  </Step>
+  
+  <Step title="Storage">
+    Saves valid settings to `localStorage`:
+    - `geminiApiKey`: Your API key
+    - `geminiModel`: Selected model name
+    - `theme`: Theme preference (saved automatically on change)
+  </Step>
+  
+  <Step title="Feedback">
+    Displays success or error messages based on validation results.
+  </Step>
+  
+  <Step title="Auto-close">
+    On successful save, the modal automatically closes after 2 seconds.
+    
+    From `index.html:886-888`:
+    ```javascript
+    setTimeout(() => {
+      settingsModal.style.display = 'none';
+    }, 2000);
+    ```
+  </Step>
+</Steps>
+
+## First-time setup
+
+When you first launch Screen Answerer without a saved API key, a welcome card appears:
+
+From `index.html:654-659`:
+```html
+<div id="firstTimeSetup" class="card" style="display: none; border-left: 4px solid var(--warning-color);">
+  <h2>Welcome to Quiz Assistant!</h2>
+  <p>To get started, you need to set up your Google Gemini API key.</p>
+  <p>Click the ⚙️ settings icon in the top right corner to configure your API key.</p>
+  <button id="openSettingsBtn" class="save-settings" style="max-width: 200px; margin-top: 15px;">Open Settings</button>
+</div>
+```
+
+<Note>
+  This welcome message automatically hides once you successfully save a valid API key.
+</Note>
+
+## Closing the settings modal
+
+You can close the settings modal in multiple ways:
+
+1. **Close button**: Click the ✕ in the top-right corner
+2. **Click outside**: Click anywhere outside the modal
+3. **Auto-close**: After successfully saving settings (2-second delay)
+
+Implementation:
+
+```javascript
+// Close button
+closeSettings.addEventListener('click', function() {
+  settingsModal.style.display = 'none';
+});
+
+// Click outside modal
+window.addEventListener('click', function(event) {
+  if (event.target === settingsModal) {
+    settingsModal.style.display = 'none';
+  }
+});
+```
+
+## Settings persistence
+
+All settings use `localStorage` for persistence:
+
+| Setting | LocalStorage Key | Default Value |
+|---------|-----------------|---------------|
+| API Key | `geminiApiKey` | None (required) |
+| Model | `geminiModel` | `gemini-2.0-flash-lite` |
+| Theme | `theme` | `dark` |
+
+### Loading saved settings
+
+On page load, Screen Answerer restores your previous settings:
+
+```javascript
+// Load API key
+const savedApiKey = localStorage.getItem('geminiApiKey');
+if (savedApiKey) {
+  apiKeyInput.value = savedApiKey;
+}
+
+// Load model preference
+const savedModel = localStorage.getItem('geminiModel');
+if (savedModel) {
+  const modelIndex = modelOptions.indexOf(savedModel);
+  if (modelIndex !== -1) {
+    modelSlider.value = modelIndex;
+    selectedModel.textContent = savedModel;
+  }
+}
+
+// Load theme
+const savedTheme = localStorage.getItem('theme') || 'dark';
+const savedThemeOption = document.querySelector(`.theme-option[data-theme="${savedTheme}"]`);
+if (savedThemeOption) {
+  savedThemeOption.click();
+}
+```
+
+## Responsive design
+
+The settings modal is fully responsive and adapts to different screen sizes:
+
+From `index.html:157-167`:
+```css
+.settings-content {
+  background-color: var(--card-color);
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+```
+
+<Info>
+  The modal is scrollable on smaller screens to ensure all settings remain accessible.
+</Info>
+
+## Best practices
+
+<Tip>
+  **Settings checklist for optimal experience:**
+  - ✅ Configure a valid Gemini API key
+  - ✅ Choose a model based on your speed vs. accuracy needs
+  - ✅ Select a theme that's comfortable for your environment
+  - ✅ Test your settings with a sample question before heavy use
+</Tip>
+
+### When to update settings
+
+- **API Key**: Change if compromised or when switching Google accounts
+- **Model**: Adjust based on question complexity and performance needs
+- **Theme**: Switch based on time of day or ambient lighting
+
+## Troubleshooting
+
+### Settings not saving
+
+<Warning>
+  If your settings aren't persisting:
+  - Check if localStorage is enabled in your browser
+  - Ensure you're not in incognito/private mode (some browsers restrict localStorage)
+  - Verify browser storage quota hasn't been exceeded
+</Warning>
+
+### Modal won't close
+
+If the settings modal becomes unresponsive:
+- Try clicking the ✕ close button
+- Click outside the modal area
+- Refresh the page (settings are saved immediately)
+
+### Theme not applying
+
+If theme changes don't take effect:
+- Ensure JavaScript is enabled
+- Check browser console for errors
+- Try clearing browser cache and reloading
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Start answering quiz questions
+  </Card>
+  
+  <Card title="Screen monitoring" icon="display" href="/essentials/screen-monitoring">
+    Set up automatic question detection
+  </Card>
+</CardGroup>

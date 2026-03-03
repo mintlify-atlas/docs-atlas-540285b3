@@ -1,0 +1,191 @@
+---
+title: API key setup
+description: Learn how to obtain and configure your Google Gemini API key for Screen Answerer
+---
+
+## Overview
+
+Screen Answerer requires a Google Gemini API key to process quiz questions and generate answers. Your API key is stored locally in your browser and is never sent to our servers - it goes directly to Google's Gemini API.
+
+<Note>
+  Screen Answerer uses client-side storage for your API key. This means your key stays on your device and is only used to authenticate with Google's Gemini API.
+</Note>
+
+## Obtaining a Gemini API key
+
+<Steps>
+  <Step title="Visit Google AI Studio">
+    Navigate to [Google AI Studio](https://aistudio.google.com/app/apikey) to access the API key management page.
+  </Step>
+  
+  <Step title="Sign in with your Google account">
+    If you're not already signed in, use your Google account credentials. You'll need an active Google account to create API keys.
+  </Step>
+  
+  <Step title="Create a new API key">
+    Click the "Create API Key" button. Google will generate a new key for you instantly.
+    
+    <Info>
+      The Gemini API offers a generous free tier, making it perfect for students and casual users.
+    </Info>
+  </Step>
+  
+  <Step title="Copy the API key">
+    Once generated, copy the entire API key. It should follow this format: `AIza` followed by 35 additional characters (letters, numbers, hyphens, and underscores).
+    
+    <Warning>
+      Store your API key securely. Don't share it publicly or commit it to version control systems.
+    </Warning>
+  </Step>
+</Steps>
+
+## Configuring your API key in Screen Answerer
+
+### First-time setup
+
+When you first launch Screen Answerer, you'll see a welcome message prompting you to configure your API key:
+
+<Steps>
+  <Step title="Open settings">
+    Click the ⚙️ settings icon in the top-right corner of the application, or click the "Open Settings" button in the welcome message.
+  </Step>
+  
+  <Step title="Navigate to API Key tab">
+    In the settings modal, ensure you're on the "API Key" tab (it's the first tab by default).
+  </Step>
+  
+  <Step title="Enter your API key">
+    Paste your Gemini API key into the input field labeled "Enter your Gemini API Key".
+  </Step>
+  
+  <Step title="Save settings">
+    Click the "Save Settings" button at the bottom of the modal. Screen Answerer will validate your API key by sending a test request to the Gemini API.
+    
+    <Info>
+      If validation succeeds, you'll see a success message: "✅ API key validated and saved successfully!"
+    </Info>
+  </Step>
+</Steps>
+
+### API key validation
+
+When you save your API key, Screen Answerer performs validation by:
+
+1. **Format checking** - Verifies the key matches the expected pattern: `/^AIza[0-9A-Za-z_-]{35}$/`
+2. **API testing** - Sends a test question to the Gemini API to confirm the key works
+
+From `server.js:402`:
+```javascript
+if (!/^AIza[0-9A-Za-z_-]{35}$/.test(req.body.apiKey)) {
+  return res.status(400).json({ 
+    error: 'Invalid API key format', 
+    message: 'Please provide a valid Gemini API key' 
+  });
+}
+```
+
+### Updating your API key
+
+To change or update your API key:
+
+1. Click the ⚙️ settings icon
+2. Navigate to the "API Key" tab
+3. Replace the existing key with your new one
+4. Click "Save Settings" to validate and store the new key
+
+## Security and storage
+
+### Local storage
+
+Your API key is stored in your browser's `localStorage` under the key `geminiApiKey`. This means:
+
+<Accordion title="Benefits of local storage">
+  - **Privacy**: Your key never passes through Screen Answerer's servers
+  - **Persistence**: The key remains saved even after closing your browser
+  - **Direct communication**: API requests go straight from your browser to Google
+</Accordion>
+
+<Accordion title="Security considerations">
+  - The key is stored in plain text in localStorage
+  - Anyone with access to your browser can retrieve it
+  - Clear your browser data will delete the stored key
+  - Use browser profiles or incognito mode for additional isolation
+</Accordion>
+
+### API key transmission
+
+From `index.html:1086-1089`, your API key is sent directly to the backend:
+
+```javascript
+if (apiKey) {
+  endpoint = '/process_question_with_key';
+  formData.append('apiKey', apiKey);
+  formData.append('model', selectedModel);
+}
+```
+
+The server validates and uses it to initialize the Gemini client (`server.js:426`):
+
+```javascript
+const customGenAI = new GoogleGenerativeAI(req.body.apiKey);
+```
+
+## Troubleshooting
+
+### Invalid API key format
+
+<Warning>
+  If you see "Invalid API key format", ensure your key starts with `AIza` and is exactly 39 characters long.
+</Warning>
+
+Double-check that you've copied the entire key without any extra spaces or characters.
+
+### Authentication errors
+
+If you receive authentication errors:
+
+- Verify the API key is active in [Google AI Studio](https://aistudio.google.com/app/apikey)
+- Check if the key has been revoked or expired
+- Ensure your Google account has API access enabled
+
+### Quota exceeded
+
+<Info>
+  The Gemini API has rate limits. If you exceed your quota, you'll see: "API quota exceeded. Please try again later."
+</Info>
+
+From `server.js:462-466`:
+```javascript
+else if (error.message && error.message.includes('quota')) {
+  return res.status(429).json({ 
+    error: 'API quota exceeded', 
+    message: 'API quota limit reached. Please try again later.' 
+  });
+}
+```
+
+To resolve quota issues:
+- Wait for the quota to reset (typically every minute)
+- Reduce the frequency of screen monitoring
+- Consider upgrading to a paid tier for higher limits
+
+## Best practices
+
+<Tip>
+  - **Keep it private**: Never share your API key in screenshots, videos, or public repositories
+  - **Monitor usage**: Check your API usage in Google AI Studio regularly
+  - **Rotate keys**: Generate new keys periodically for enhanced security
+  - **Use separate keys**: Consider using different keys for testing and production
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Model selection" icon="brain" href="/configuration/model-selection">
+    Choose the right Gemini model for your needs
+  </Card>
+  
+  <Card title="Settings" icon="sliders" href="/configuration/settings">
+    Customize your Screen Answerer experience
+  </Card>
+</CardGroup>

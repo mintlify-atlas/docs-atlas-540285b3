@@ -1,0 +1,227 @@
+---
+title: "Using the screen monitor"
+description: "Learn how to automatically detect and answer quiz questions using Screen Answerer's screen monitoring feature"
+---
+
+The screen monitor is Screen Answerer's most powerful feature. It continuously watches your screen for quiz questions and automatically provides answers in real-time.
+
+## How screen monitoring works
+
+Screen Answerer uses your browser's native screen capture API to:
+
+1. Capture screenshots of your selected window/screen every 5 seconds
+2. Send the image to Google Gemini API for analysis
+3. Detect if the image contains a quiz question
+4. Generate and display the answer if a question is found
+
+<Info>
+  The monitoring interval is set to 5 seconds to balance responsiveness with API quota management. This prevents excessive API calls while still detecting questions quickly.
+</Info>
+
+## Browser compatibility
+
+Screen monitoring works best with:
+
+- **Chrome/Chromium** - Full support, recommended
+- **Firefox** - Full support with adjusted frame rate
+- **Edge** - Full support
+- **Safari** - Limited support (may have restrictions)
+
+<Warning>
+  Safari users may experience limitations due to browser restrictions on screen capture APIs. For the best experience, use Chrome or Firefox.
+</Warning>
+
+## Starting the screen monitor
+
+<Steps>
+  <Step title="Ensure API key is configured">
+    Before starting the monitor, make sure you've added your Google Gemini API key:
+    
+    1. Click the ⚙️ **Settings** icon
+    2. Navigate to the **API Key** tab
+    3. Enter and save your API key
+    
+    <Note>
+      If you haven't set up an API key yet, see the [Getting API Key guide](/guides/getting-api-key).
+    </Note>
+  </Step>
+
+  <Step title="Click 'Start Monitoring'">
+    In the **Screen Monitor** section of the app, click the **Start Monitoring** button.
+    
+    Your browser will prompt you to select what to share:
+    - **Entire Screen** - Monitors your entire display
+    - **Window** - Monitors a specific application window
+    - **Browser Tab** - Monitors a single browser tab
+    
+    <Tip>
+      Select the window or screen where your quiz will appear. Choosing a specific window reduces processing and uses less API quota than monitoring your entire screen.
+    </Tip>
+  </Step>
+
+  <Step title="Grant screen capture permission">
+    Click **Share** in the browser permission dialog to allow Screen Answerer to capture your screen.
+    
+    <Warning>
+      If you deny permission, the monitor won't start. You'll need to click **Start Monitoring** again and approve the permission request.
+    </Warning>
+  </Step>
+
+  <Step title="Monitor starts running">
+    Once permission is granted:
+    
+    - The status changes to **Active** (displayed in purple)
+    - The monitor status shows "Monitoring active - watching for quiz questions"
+    - A preview of the captured screen appears below
+    - The **Stop Monitoring** button becomes enabled
+    
+    Screen Answerer is now watching for questions!
+  </Step>
+</Steps>
+
+## When a question is detected
+
+When Screen Answerer identifies a quiz question:
+
+1. **Answer Display** - The answer appears in the **ANSWER** section at the top
+2. **Results Section** - The full response is shown in the results area below
+3. **Counter Updates** - The "Questions Processed" counter increments
+4. **Status Message** - Shows "Quiz question detected! Answer displayed above."
+
+<Info>
+  Screen Answerer displays only the most relevant answer (the first response from Gemini). This keeps the interface clean and focuses on the correct answer.
+</Info>
+
+## Stopping the monitor
+
+To stop monitoring:
+
+1. Click the **Stop Monitoring** button
+2. The status changes back to **Inactive**
+3. The monitor status shows "Monitoring stopped"
+4. Screen capture permission is released
+
+<Note>
+  If you close the tab or stop sharing from your browser's screen sharing controls, monitoring will automatically stop.
+</Note>
+
+## Understanding the interface
+
+### Status indicators
+
+- **Status** - Shows "Active" (purple) when monitoring, "Inactive" (default color) when stopped
+- **Questions Processed** - Running count of questions detected during the current session
+- **Monitor Status** - Text description of current activity
+- **Preview** - Live thumbnail of what's being captured
+
+### Answer display
+
+Answers are shown in two places:
+
+1. **ANSWER section** (top) - Quick reference for the current answer
+2. **Results section** (bottom) - Full formatted response with markdown rendering
+
+<Tip>
+  Answers support markdown formatting, so you may see bullet points, code blocks, or other formatted text for complex responses.
+</Tip>
+
+## Rate limiting and performance
+
+Screen Answerer includes built-in rate limiting to protect your API quota:
+
+- **Client-side throttling** - Minimum 5 seconds between requests
+- **Server-side limiting** - Maximum 100 requests per 15 minutes per IP
+- **API quota tracking** - Monitors approach to daily/minute limits
+
+<Warning>
+  If you receive a "Rate limit exceeded" message, wait a few seconds. The monitor will automatically retry on the next interval.
+</Warning>
+
+## Tips for effective monitoring
+
+<AccordionGroup>
+  <Accordion title="Choose the right capture area">
+    **Window capture** is more efficient than full screen:
+    - Reduces image size
+    - Faster processing
+    - Uses less API quota
+    - Better focus on relevant content
+    
+    Only capture the window where questions appear.
+  </Accordion>
+
+  <Accordion title="Position questions clearly">
+    For best detection:
+    - Ensure text is readable and not obscured
+    - Avoid overlapping windows
+    - Use adequate screen brightness
+    - Maximize the quiz window for clearer capture
+  </Accordion>
+
+  <Accordion title="Monitor API usage">
+    Keep an eye on the **Questions Processed** counter:
+    - High counts may indicate the detector is too sensitive
+    - If non-questions are detected, adjust window selection
+    - Consider stopping monitoring when not actively taking quizzes
+  </Accordion>
+
+  <Accordion title="Use appropriate model">
+    Choose the right Gemini model in settings:
+    - **gemini-2.0-flash-lite** (default) - Faster, lower cost, good accuracy
+    - **gemini-2.0-flash** - More capable, slightly slower, better for complex questions
+    
+    The lite model is recommended for monitoring to preserve quota.
+  </Accordion>
+</AccordionGroup>
+
+## Privacy and security
+
+<Warning>
+  **Privacy consideration**: Screen monitoring captures whatever is displayed on your selected screen/window. Be careful not to capture sensitive information.
+</Warning>
+
+Screen Answerer handles your data securely:
+
+- **Temporary storage** - Screenshots are deleted immediately after processing (see `history.safelyDeleteFile()` in server.js:229)
+- **No logging** - Images are not stored on Screen Answerer's servers
+- **Direct API calls** - Images go directly to Google Gemini; Screen Answerer doesn't intercept them
+- **Local API key** - Your API key stays in your browser's localStorage
+
+## Troubleshooting
+
+### Monitor won't start
+
+- **Check API key**: Ensure a valid key is saved in Settings
+- **Browser permissions**: Verify screen capture permission is granted
+- **Browser support**: Try Chrome or Firefox if using a different browser
+
+### Questions not detected
+
+- **Image quality**: Ensure text is clear and readable
+- **Capture area**: Verify the question is within the captured region
+- **Detection interval**: Wait at least 5 seconds after question appears
+- **Model selection**: Try switching to `gemini-2.0-flash` for better detection
+
+### API errors
+
+- **"Invalid API key"**: Re-enter your API key in Settings
+- **"Quota exceeded"**: Wait for quota reset (check Google Cloud Console)
+- **"Rate limited"**: Reduce monitoring frequency or wait a few seconds
+
+### Performance issues
+
+- **High CPU usage**: Select a specific window instead of entire screen
+- **Slow responses**: Check your internet connection
+- **Browser lag**: Close unnecessary tabs and applications
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Best practices" icon="star" href="/guides/best-practices">
+    Optimize your screen monitoring workflow
+  </Card>
+  
+  <Card title="Model selection" icon="sliders" href="/configuration/model-selection">
+    Learn which Gemini model to use
+  </Card>
+</CardGroup>

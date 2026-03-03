@@ -1,0 +1,203 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Screen Answerer
+---
+
+## Common issues
+
+This guide covers common issues you might encounter while using Screen Answerer and how to resolve them.
+
+### API key errors
+
+#### Invalid API key format
+
+**Error message:** `Invalid API key format`
+
+**Cause:** The API key doesn't match the expected Gemini API key format.
+
+**Solution:**
+1. Verify your API key starts with `AIza` and is exactly 39 characters long
+2. Check for any extra spaces or characters when copying the key
+3. Get a new API key from [Google AI Studio](https://aistudio.google.com/app/apikey) if needed
+
+#### API key validation failed
+
+**Error message:** `Invalid API key provided. Please check your API key and try again.`
+
+**Cause:** The API key is formatted correctly but is not valid or has been revoked.
+
+**Solution:**
+1. Verify the API key is active in Google AI Studio
+2. Check if the key has any usage restrictions or quotas
+3. Generate a new API key if the current one has been revoked
+4. Ensure you're using the correct API key for the Gemini API
+
+#### Missing API key
+
+**Error message:** `API key is required`
+
+**Cause:** No API key was provided in the request.
+
+**Solution:**
+1. Open Settings (⚙️ icon) in the top right corner
+2. Navigate to the API Key tab
+3. Enter your Gemini API key
+4. Click Save Settings
+
+### Rate limiting
+
+#### Too many requests
+
+**Error message:** `Rate limit exceeded. Please wait before sending another request`
+
+**Cause:** You've made too many requests in a short time period. The application enforces a 5-second window between requests.
+
+**Solution:**
+1. Wait at least 5 seconds before sending another request
+2. If using screen monitoring, the system automatically spaces requests
+3. Reduce the monitoring frequency if you're hitting rate limits frequently
+
+#### Server rate limiting
+
+**Error message:** HTTP 429 status code
+
+**Cause:** The server's global rate limiter (100 requests per 15 minutes per IP) has been exceeded.
+
+**Solution:**
+1. Wait 15 minutes for the rate limit to reset
+2. Reduce the frequency of requests
+3. If you're sharing an IP with others, coordinate API usage
+
+### Quota exhaustion
+
+#### API quota exceeded
+
+**Error message:** `API quota limit reached. Please try again later.`
+
+**Cause:** Your Gemini API quota has been exhausted.
+
+**Solution:**
+1. Check your quota usage in [Google AI Studio](https://aistudio.google.com/)
+2. Wait for your quota to reset (typically resets daily or monthly)
+3. Consider upgrading your API plan if you need higher limits
+4. Switch to a lighter model (gemini-2.0-flash-lite) to reduce quota usage
+
+#### Approaching quota limit
+
+**Error message:** `API quota limit approaching, please try again later`
+
+**Cause:** The application's internal quota counter (50 calls per minute) is near the limit.
+
+**Solution:**
+1. Wait 1 minute for the counter to reset
+2. Reduce the frequency of monitoring or manual requests
+3. This is a protective measure to prevent exceeding API quotas
+
+### Connection errors
+
+#### Failed to process question
+
+**Error message:** `Failed to process question`
+
+**Cause:** General error during question processing, could be network, API, or server-related.
+
+**Solution:**
+1. Check your internet connection
+2. Verify the Screen Answerer server is running
+3. Check browser console for detailed error messages
+4. Try refreshing the page
+5. Verify your API key is still valid
+
+#### Server not responding
+
+**Cause:** The Screen Answerer server is not running or not accessible.
+
+**Solution:**
+1. Verify the server is running on the correct port (default: 3000)
+2. Check if another application is using port 3000
+3. The server automatically tries port 3001 if 3000 is in use
+4. Restart the server: `npm start`
+
+### Image upload issues
+
+#### Only image files allowed
+
+**Error message:** `Only image files are allowed!`
+
+**Cause:** You attempted to upload a non-image file.
+
+**Solution:**
+1. Only upload PNG or JPEG image files
+2. Supported formats: `.png`, `.jpg`, `.jpeg`
+3. Ensure the file extension is correct
+
+#### File size too large
+
+**Cause:** Image file exceeds the 5MB limit.
+
+**Solution:**
+1. Compress your image to under 5MB
+2. Use image compression tools or resize the image
+3. Screenshot only the relevant portion of the screen
+
+#### No image provided
+
+**Error message:** `No image provided` or `No question or image provided`
+
+**Cause:** The request was sent without an image or text question.
+
+**Solution:**
+1. Ensure you've captured a screenshot before submitting
+2. Verify the file was selected correctly
+3. Check browser console for upload errors
+
+### Screen monitoring issues
+
+#### Screen capture permission denied
+
+**Cause:** Browser permission to capture screen was denied.
+
+**Solution:**
+1. Click "Start Monitoring" again and allow screen sharing
+2. Select the correct screen or window to share
+3. Check browser permissions in settings
+
+#### Monitoring stopped unexpectedly
+
+**Cause:** User stopped sharing screen or browser lost permission.
+
+**Solution:**
+1. Click "Start Monitoring" to restart
+2. Ensure you don't accidentally close the share permission
+3. Check if browser has any restrictions on long-running screen captures
+
+### Browser compatibility
+
+#### Features not working properly
+
+**Warning:** `For the best experience, please use Chrome or Firefox.`
+
+**Cause:** Some browsers have limited support for screen capture APIs.
+
+**Solution:**
+1. Use Google Chrome or Mozilla Firefox for best compatibility
+2. Update your browser to the latest version
+3. Check if your browser supports `navigator.mediaDevices.getDisplayMedia()`
+
+## Getting help
+
+If you continue to experience issues:
+
+1. Check the browser console for detailed error messages (F12 or right-click > Inspect > Console)
+2. Verify all system requirements are met
+3. Ensure you're using a supported browser (Chrome or Firefox recommended)
+4. Check your API key status in Google AI Studio
+5. Review your API quota and usage limits
+
+## Error logging
+
+The application logs errors to:
+- Browser console (client-side errors)
+- Server console (server-side errors)
+
+Check both locations for detailed debugging information.

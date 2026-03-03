@@ -1,0 +1,334 @@
+---
+title: Monitor screen
+description: Automatically detect and answer quiz questions from screen captures
+---
+
+The `/monitor_screen` endpoint monitors screen captures to automatically detect quiz questions and provide answers. It combines quiz detection with question answering in a single API call.
+
+## Endpoint
+
+```
+POST /monitor_screen
+```
+
+## Authentication
+
+Requires a valid Gemini API key provided via:
+- **Recommended**: `X-API-Key` header
+- Alternative: `apiKey` in request body
+
+See [Authentication](/api/authentication) for details.
+
+## Request parameters
+
+### Headers
+
+<ParamField path="X-API-Key" type="string" required>
+  Your Google Gemini API key
+</ParamField>
+
+<ParamField path="Content-Type" type="string" required>
+  Must be `multipart/form-data` for image upload
+</ParamField>
+
+### Body parameters
+
+<ParamField body="image" type="file" required>
+  Screenshot image to analyze for quiz questions
+  
+  **Constraints**:
+  - Maximum size: 5MB (server.js:79)
+  - Supported formats: PNG, JPEG
+  - MIME type validation enforced
+</ParamField>
+
+<ParamField body="apiKey" type="string">
+  Your Gemini API key (alternative to header)
+</ParamField>
+
+## Response
+
+### Successful detection
+
+<ResponseField name="detected" type="boolean">
+  `true` if a quiz question was found in the image
+</ResponseField>
+
+<ResponseField name="answers" type="array">
+  Array of answer strings (only present when `detected` is `true`)
+</ResponseField>
+
+### No question detected
+
+<ResponseField name="detected" type="boolean">
+  `false` when no quiz question is found
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Explanation message: "No quiz question detected in the image"
+</ResponseField>
+
+## How it works
+
+The endpoint performs a two-step process:
+
+<Steps>
+  <Step title="Quiz detection">
+    The image is analyzed with a simple prompt: "Is this a quiz question image? Answer only yes/no."
+    
+    If the AI responds with "yes", proceed to step 2. Otherwise, return `detected: false`.
+  </Step>
+  
+  <Step title="Answer extraction">
+    If a quiz question is detected, the same image is processed again to extract the answer using the optimized answering prompt.
+  </Step>
+</Steps>
+
+<Info>
+  This two-step approach minimizes false positives by first confirming a quiz question exists before attempting to answer it.
+</Info>
+
+## Examples
+
+### Basic usage
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/monitor_screen \
+  -H "X-API-Key: YOUR_GEMINI_API_KEY" \
+  -F "image=@screen-capture.png"
+```
+
+```javascript Fetch API
+const formData = new FormData();
+formData.append('image', screenshotBlob);
+
+const response = await fetch('http://localhost:3000/monitor_screen', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'YOUR_GEMINI_API_KEY'
+  },
+  body: formData
+});
+
+const data = await response.json();
+if (data.detected) {
+  console.log('Answers:', data.answers);
+} else {
+  console.log('No quiz question found');
+}
+```
+
+```python Python
+import requests
+
+with open('screen-capture.png', 'rb') as f:
+    response = requests.post(
+        'http://localhost:3000/monitor_screen',
+        headers={'X-API-Key': 'YOUR_GEMINI_API_KEY'},
+        files={'image': f}
+    )
+
+data = response.json()
+if data['detected']:
+    print('Answers:', data['answers'])
+else:
+    print('No quiz question detected')
+```
+</CodeGroup>
+
+### Continuous monitoring
+
+```javascript JavaScript - Screen Capture Loop
+let isMonitoring = false;
+
+async function monitorScreen() {
+  if (!isMonitoring) return;
+  
+  try {
+    // Capture screen using browser API
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { mediaSource: 'screen' }
+    });
+    
+    // Create screenshot from stream
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    // Convert to blob and send to API
+    canvas.toBlob(async (blob) => {
+      const formData = new FormData();
+      formData.append('image', blob);
+      
+      const response = await fetch('http://localhost:3000/monitor_screen', {
+        method: 'POST',
+        headers: { 'X-API-Key': apiKey },
+        body: formData
+      });
+      
+      const data = await response.json();
+      if (data.detected) {
+        displayAnswers(data.answers);
+      }
+      
+      // Stop tracks to free resources
+      stream.getTracks().forEach(track => track.stop());
+      
+      // Continue monitoring after 5 seconds
+      setTimeout(monitorScreen, 5000);
+    });
+  } catch (error) {
+    console.error('Monitoring error:', error);
+    setTimeout(monitorScreen, 5000);
+  }
+}
+
+// Start monitoring
+isMonitoring = true;
+monitorScreen();
+```
+
+## Response examples
+
+### Quiz question detected
+
+```json
+{
+  "detected": true,
+  "answers": [
+    "The correct answer is: Paris",
+    "Paris is the capital and largest city of France"
+  ]
+}
+```
+
+### No quiz question
+
+```json
+{
+  "detected": false,
+  "message": "No quiz question detected in the image"
+}
+```
+
+## Error responses
+
+<Accordion title="400 Bad Request">
+  **No image provided**
+  ```json
+  {
+    "error": "No image provided"
+  }
+  ```
+  
+  **Missing API key**
+  ```json
+  {
+    "error": "API key is required"
+  }
+  ```
+</Accordion>
+
+<Accordion title="429 Too Many Requests">
+  **Rate limit exceeded** (server.js:334-345)
+  ```json
+  {
+    "error": "Rate limit exceeded",
+    "message": "Please wait before sending another request"
+  }
+  ```
+  
+  This endpoint enforces a 5-second window between requests per client IP.
+</Accordion>
+
+<Accordion title="500 Internal Server Error">
+  **Processing failure**
+  ```json
+  {
+    "error": "Failed to process screen capture",
+    "message": "Detailed error message"
+  }
+  ```
+</Accordion>
+
+## Rate limiting
+
+This endpoint has stricter rate limiting than other endpoints:
+
+<Warning>
+  **Per-client rate limit**: 5-second minimum interval between requests (server.js:91-102)
+  
+  Requests made within 5 seconds of the previous request will be rejected with a 429 error.
+</Warning>
+
+Additional limits:
+- Global limit: 100 requests per 15 minutes per IP
+- Internal quota: 50 API calls per minute
+
+See [Rate Limiting](/api/rate-limiting) for details.
+
+## Implementation details
+
+### Detection logic (server.js:234-271)
+
+The detection uses a simplified prompt:
+```javascript
+const prompt = 'Is this a quiz question image? Answer only yes/no.';
+```
+
+Response parsing:
+```javascript
+const response = result.response.text().toLowerCase().trim();
+return response.includes('yes');
+```
+
+### File cleanup
+
+Images are automatically deleted after processing using the history tracking system:
+
+```javascript
+// Mark file as processed
+history.markFileProcessed(imagePath);
+
+// Safely delete when no longer in use
+history.safelyDeleteFile(imagePath);
+```
+
+This ensures temporary files don't accumulate on the server.
+
+## Best practices
+
+<Tip>
+  **Optimal monitoring interval**: Use 5-second intervals to match the rate limit window and avoid wasting API quota on identical screens.
+</Tip>
+
+<Info>
+  The detection step helps conserve API quota by filtering out non-quiz screens before attempting to answer.
+</Info>
+
+<Warning>
+  Always stop screen capture streams when not monitoring to prevent memory leaks and excessive resource usage.
+</Warning>
+
+## Browser compatibility
+
+Screen capture requires `navigator.mediaDevices.getDisplayMedia()`:
+
+| Browser | Support |
+|---------|--------|
+| Chrome | ✅ 72+ |
+| Firefox | ✅ 66+ |
+| Edge | ✅ 79+ |
+| Safari | ✅ 13+ |
+
+## Related endpoints
+
+- [Process Question](/api/process-question) - Process questions without detection step
+- [Rate Limiting](/api/rate-limiting) - Understanding rate limits
+- [Examples](/api/examples) - Complete integration examples

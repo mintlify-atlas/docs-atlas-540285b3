@@ -1,0 +1,167 @@
+---
+title: Screen monitoring
+description: Automatically detect and answer quiz questions with real-time screen capture and AI-powered analysis
+---
+
+Screen monitoring is Screen Answerer's flagship feature that captures your screen in real-time, detects quiz questions, and provides instant answers without manual intervention.
+
+## How it works
+
+Screen monitoring uses your browser's native screen capture API combined with AI vision models to continuously analyze your screen for quiz questions.
+
+<Steps>
+  <Step title="Start screen capture">
+    Click the "Start Monitoring" button and select which screen or window to share when prompted by your browser.
+  </Step>
+  
+  <Step title="Real-time analysis">
+    Screen Answerer captures frames every 5 seconds and sends them to the Gemini AI model for analysis.
+  </Step>
+  
+  <Step title="Question detection">
+    The AI model determines if a quiz question is present in the captured frame using vision recognition.
+  </Step>
+  
+  <Step title="Automatic answering">
+    When a question is detected, the AI immediately provides the answer and displays it in the interface.
+  </Step>
+</Steps>
+
+## Starting screen monitoring
+
+Before you can monitor your screen, make sure you've configured your API key in settings.
+
+<Info>
+  Screen monitoring requires permission to access your screen. Your browser will prompt you to select which screen or window to share.
+</Info>
+
+1. Navigate to the Screen Monitor section
+2. Click **Start Monitoring**
+3. Select the screen or window containing your quiz
+4. The status will change to "Active" and monitoring begins
+
+```javascript
+// The monitoring interval runs every 5 seconds
+const MONITORING_INTERVAL = 5000;
+
+// Start the monitoring interval
+monitoringInterval = setInterval(() => {
+    // Capture current video frame to canvas
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+    
+    // Convert canvas to blob and send to API
+    canvas.toBlob(blob => {
+        // Process with AI model
+    }, 'image/png');
+}, MONITORING_INTERVAL);
+```
+
+## Real-time preview
+
+While monitoring is active, you'll see:
+
+- **Live preview**: A thumbnail of the most recent captured frame
+- **Status indicator**: Shows whether monitoring is active or inactive
+- **Questions counter**: Tracks how many questions have been detected
+
+<Accordion title="Why does the preview update every 5 seconds?">
+  Screen Answerer captures frames at 5-second intervals to balance responsiveness with API quota usage. This prevents excessive API calls while still providing timely answers to quiz questions.
+</Accordion>
+
+## Stopping monitoring
+
+You can stop screen monitoring at any time:
+
+- Click the **Stop Monitoring** button, or
+- Close the screen sharing prompt in your browser
+
+When you stop monitoring, the status returns to "Inactive" and no further API calls are made.
+
+## Browser compatibility
+
+Screen monitoring works best with modern browsers that support the `getDisplayMedia` API:
+
+<CardGroup cols={2}>
+  <Card title="Chrome" icon="chrome">
+    Full support with optimal performance
+  </Card>
+  <Card title="Firefox" icon="firefox">
+    Full support with adjusted frame rates
+  </Card>
+  <Card title="Edge" icon="edge">
+    Supported but not recommended
+  </Card>
+  <Card title="Safari" icon="safari">
+    Limited support, may not work properly
+  </Card>
+</CardGroup>
+
+<Warning>
+  If you're using Safari or another unsupported browser, you may see a warning message. Switch to Chrome or Firefox for the best experience.
+</Warning>
+
+## Rate limiting and quotas
+
+Screen monitoring is designed to respect API rate limits:
+
+- **5-second intervals** between captures minimize API usage
+- **Built-in rate limiting** prevents quota exhaustion (50 calls per minute)
+- **Exponential backoff** automatically retries failed requests
+
+```javascript
+// Rate limiting configuration in server.js
+const RATE_LIMIT_WINDOW = 5000; // 5 seconds between requests
+const API_CALL_QUOTA_LIMIT = 50; // Max 50 calls per minute
+const MAX_RETRIES = 3; // Retry failed requests up to 3 times
+```
+
+## Troubleshooting
+
+<Accordion title="Monitoring won't start">
+  Make sure you've granted screen sharing permission when prompted. Check that your API key is configured correctly in settings.
+</Accordion>
+
+<Accordion title="Questions aren't being detected">
+  Ensure the quiz question is clearly visible on screen. The AI model needs to see the full question text to detect it. Try increasing the window size or adjusting the screen position.
+</Accordion>
+
+<Accordion title="Too many rate limit errors">
+  The monitoring interval is set to 5 seconds to prevent rate limiting. If you still encounter errors, check your API quota in the Google AI Studio dashboard.
+</Accordion>
+
+## Technical implementation
+
+Screen monitoring leverages the browser's MediaDevices API:
+
+```javascript
+// Request screen capture permission
+navigator.mediaDevices.getDisplayMedia({
+    video: {
+        cursor: "always",
+        frameRate: 5 // Lower frame rate for Firefox
+    },
+    audio: false
+})
+.then(stream => {
+    const videoTrack = stream.getVideoTracks()[0];
+    const videoElement = document.createElement('video');
+    videoElement.srcObject = stream;
+    
+    videoElement.onloadedmetadata = function() {
+        videoElement.play();
+        startScreenMonitoring(videoElement, videoTrack, stream);
+    };
+});
+```
+
+Each captured frame is sent to the `/monitor_screen` endpoint (server.js:319), which:
+
+1. Validates the API key
+2. Applies rate limiting per client IP
+3. Uses the `detectQuizQuestion()` function to check for questions
+4. If detected, calls `processImageQuestion()` to generate the answer
+5. Returns the answer formatted as markdown
+
+<Tip>
+  For best results, make sure quiz questions are displayed clearly on screen with good contrast and readable text.
+</Tip>

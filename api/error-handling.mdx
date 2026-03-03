@@ -1,0 +1,278 @@
+---
+title: Error handling
+description: Understand error responses and implement proper retry logic
+---
+
+## Error response format
+
+All errors from Screen Answerer return JSON responses with this structure:
+
+```json
+{
+  "error": "Error type",
+  "message": "Detailed error description"
+}
+```
+
+## HTTP status codes
+
+Screen Answerer uses standard HTTP status codes to indicate success or failure:
+
+| Status | Meaning | Description |
+|--------|---------|-------------|
+| `200` | Success | Request processed successfully |
+| `400` | Bad Request | Missing or invalid request parameters |
+| `401` | Unauthorized | Invalid or rejected API key |
+| `429` | Too Many Requests | Rate limit exceeded |
+| `500` | Internal Server Error | Server or API processing error |
+
+## Common errors
+
+### 400 Bad Request
+
+#### Missing API key
+
+```json
+{
+  "error": "API key is required"
+}
+```
+
+Occurs when no API key is provided in headers or body (server.js:281, 329).
+
+#### No question or image
+
+```json
+{
+  "error": "No question or image provided"
+}
+```
+
+Occurs when the request doesn't contain a question or image (server.js:293).
+
+#### Invalid API key format
+
+```json
+{
+  "error": "Invalid API key format",
+  "message": "Please provide a valid Gemini API key"
+}
+```
+
+Occurs when the API key doesn't match the required format `AIza[0-9A-Za-z_-]{35}` (server.js:402-406).
+
+<CodeGroup>
+```bash Example request
+curl -X POST http://localhost:3000/process_question_with_key \
+  -F "apiKey=invalid_key" \
+  -F "question=What is 2+2?"
+```
+
+```json Response
+{
+  "error": "Invalid API key format",
+  "message": "Please provide a valid Gemini API key"
+}
+```
+</CodeGroup>
+
+### 401 Unauthorized
+
+#### API key authentication failure
+
+```json
+{
+  "error": "API key error",
+  "message": "Invalid API key provided. Please check your API key and try again."
+}
+```
+
+Occurs when Google's Gemini API rejects the provided API key (server.js:458-461).
+
+### 429 Too Many Requests
+
+#### Rate limit exceeded
+
+```json
+{
+  "error": "Rate limit exceeded",
+  "message": "Please wait before sending another request"
+}
+```
+
+Screen Answerer implements client-based rate limiting with a 5-second window between requests per IP address (server.js:342-345).
+
+<Note>
+Rate limit: 1 request per 5 seconds per client IP (server.js:87)
+</Note>
+
+#### API quota exceeded
+
+```json
+{
+  "error": "API quota exceeded",
+  "message": "API quota limit reached. Please try again later."
+}
+```
+
+Occurs when the internal quota limit (50 calls per minute) is reached (server.js:463-466).
+
+<Warning>
+The server implements a global quota limit of 50 API calls per minute to prevent quota exhaustion (server.js:106)
+</Warning>
+
+### 500 Internal Server Error
+
+#### General processing failure
+
+```json
+{
+  "error": "Failed to process question",
+  "message": "Detailed error message from Gemini API"
+}
+```
+
+Occurs when there's an error processing the question or image (server.js:311-314, 469-472).
+
+#### Screen monitoring failure
+
+```json
+{
+  "error": "Failed to process screen capture",
+  "message": "Detailed error message"
+}
+```
+
+Occurs when screen monitoring fails (server.js:381-384).
+
+## Retry logic
+
+Screen Answerer implements automatic retry logic with exponential backoff for transient failures.
+
+### Retry configuration
+
+- **Max retries**: 3 attempts (server.js:88)
+- **Initial delay**: 1000ms (server.js:89)
+- **Backoff strategy**: Exponential with jitter (server.js:166)
+- **Max delay**: 10000ms (10 seconds)
+
+### Retryable errors
+
+The following errors trigger automatic retries:
+
+- HTTP 429 (rate limit)
+- Quota exhaustion messages
+- "Resource has been exhausted" errors
+
+<CodeGroup>
+```javascript Retry implementation
+// Screen Answerer automatically retries these errors
+const retryableErrors = [
+  '429',
+  'quota',
+  'Resource has been exhausted'
+];
+
+// Exponential backoff formula (server.js:166)
+delay = Math.min(delay * 2, 10000) * (0.8 + Math.random() * 0.4);
+```
+</CodeGroup>
+
+### Client-side retry example
+
+For errors that aren't automatically retried, implement your own retry logic:
+
+<CodeGroup>
+```javascript JavaScript
+async function processQuestionWithRetry(question, apiKey, maxRetries = 3) {
+  let lastError;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch('http://localhost:3000/process_question', {
+        method: 'POST',
+        headers: {
+          'X-API-Key': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ question })
+      });
+      
+      if (response.ok) {
+        return await response.json();
+      }
+      
+      // Don't retry client errors (4xx) except 429
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        throw new Error(await response.text());
+      }
+      
+      lastError = await response.json();
+      
+      // Wait before retrying
+      const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxRetries - 1) throw error;
+    }
+  }
+  
+  throw lastError;
+}
+```
+
+```python Python
+import requests
+import time
+
+def process_question_with_retry(question, api_key, max_retries=3):
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                'http://localhost:3000/process_question',
+                headers={'X-API-Key': api_key},
+                json={'question': question}
+            )
+            
+            if response.ok:
+                return response.json()
+            
+            # Don't retry client errors except 429
+            if 400 <= response.status_code < 500 and response.status_code != 429:
+                raise Exception(response.text)
+            
+            last_error = response.json()
+            
+            # Wait before retrying
+            delay = min(1000 * (2 ** attempt), 10000) / 1000
+            time.sleep(delay)
+            
+        except Exception as e:
+            last_error = e
+            if attempt == max_retries - 1:
+                raise
+    
+    raise last_error
+```
+</CodeGroup>
+
+## Best practices
+
+<Note>
+**Handle errors gracefully**
+
+- Check HTTP status codes before parsing responses
+- Implement exponential backoff for 429 and 500 errors
+- Log errors for debugging
+- Don't retry 4xx errors (except 429)
+</Note>
+
+<Warning>
+**Quota management**
+
+Monitor your Google Gemini API quota to avoid hitting limits. The server enforces 50 calls per minute internally.
+</Warning>

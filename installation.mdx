@@ -1,0 +1,430 @@
+---
+title: Installation
+description: Complete installation guide for Screen Answerer on your local machine
+---
+
+## Prerequisites
+
+Before installing Screen Answerer, ensure you have the following:
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    Version 14.x or higher
+    
+    [Download Node.js](https://nodejs.org/)
+  </Card>
+  <Card title="npm" icon="npm">
+    Included with Node.js
+    
+    Verify: `npm --version`
+  </Card>
+  <Card title="Google Gemini API Key" icon="key">
+    Free tier available
+    
+    [Get API key](https://aistudio.google.com/app/apikey)
+  </Card>
+  <Card title="Modern browser" icon="browser">
+    Chrome or Firefox recommended
+    
+    For screen capture support
+  </Card>
+</CardGroup>
+
+## Installation steps
+
+<Steps>
+  <Step title="Clone or download the repository">
+    Get the Screen Answerer source code:
+
+    <CodeGroup>
+    ```bash Git
+    git clone <repository-url>
+    cd screen-answerer
+    ```
+
+    ```bash Download
+    # Download the ZIP file and extract it
+    unzip screen-answerer.zip
+    cd screen-answerer
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required npm packages:
+
+    ```bash
+    npm install
+    ```
+
+    This will install:
+
+    - `express` - Web server framework
+    - `@google/generative-ai` - Google Gemini API client
+    - `cors` - Cross-origin resource sharing
+    - `helmet` - Security middleware
+    - `multer` - File upload handling
+    - `dotenv` - Environment variable management
+    - `express-rate-limit` - API rate limiting
+    - `marked` - Markdown parsing
+
+    <Info>
+      Installation typically takes 1-2 minutes depending on your internet connection.
+    </Info>
+  </Step>
+
+  <Step title="Configure environment (optional)">
+    While Screen Answerer can run without environment variables (API keys are configured through the UI), you can optionally create a `.env` file:
+
+    ```bash .env
+    # Optional: Server port (defaults to 3000)
+    PORT=3000
+
+    # Optional: Pre-configure a Gemini API key
+    # Note: Users should configure this through the UI instead
+    # GEMINI_API_KEY=your_api_key_here
+    ```
+
+    <Warning>
+      Never commit your `.env` file to version control. It's already included in `.gitignore`.
+    </Warning>
+  </Step>
+
+  <Step title="Start the server">
+    Launch the Screen Answerer server:
+
+    <CodeGroup>
+    ```bash npm
+    npm start
+    ```
+
+    ```bash node
+    node server.js
+    ```
+
+    ```bash Custom port
+    PORT=3001 npm start
+    ```
+    </CodeGroup>
+
+    You should see output similar to:
+
+    ```bash
+    Screen Answerer server running on port 3000
+    ```
+
+    <Tip>
+      If port 3000 is already in use, the server automatically tries port 3001, then 3002, and so on.
+    </Tip>
+  </Step>
+
+  <Step title="Access the application">
+    Open your browser and navigate to:
+
+    ```
+    http://localhost:3000
+    ```
+
+    You should see the Screen Answerer interface with a welcome screen prompting you to configure your API key.
+  </Step>
+</Steps>
+
+## Project structure
+
+Understanding the codebase structure:
+
+```
+screen-answerer/
+├── server.js              # Express server and API endpoints
+├── history.js             # File processing history management
+├── package.json           # Dependencies and scripts
+├── public/               # Frontend files
+│   └── index.html        # Main application interface
+└── uploads/              # Temporary image storage (auto-created)
+```
+
+### Key files
+
+**server.js**
+
+The main server file containing:
+
+- Express app configuration (server.js:10-13)
+- Security middleware setup (server.js:14-43)
+- API endpoints for question processing (server.js:274-474)
+- Screen monitoring endpoint (server.js:319-386)
+- Rate limiting logic (server.js:86-122)
+
+**history.js**
+
+Manages file lifecycle to prevent race conditions:
+
+- Tracks files being processed (history.js:6-10)
+- Safely deletes temporary files (history.js:52-84)
+- Cleans up stale entries (history.js:87-100)
+
+**public/index.html**
+
+Full-featured web interface with:
+
+- Settings modal with API key configuration
+- Screen monitoring controls
+- Theme switcher (dark/light mode)
+- Model selection slider
+- Real-time answer display
+
+## Configuration options
+
+### Server configuration
+
+Modify these settings in `server.js`:
+
+```javascript server.js
+const PORT = process.env.PORT || 3000;  // Server port
+```
+
+### Rate limiting
+
+Adjust rate limits in `server.js:46-101`:
+
+```javascript server.js
+const RATE_LIMIT_WINDOW = 5000;          // 5 seconds between requests
+const MAX_RETRIES = 3;                    // Maximum retry attempts
+const INITIAL_RETRY_DELAY = 1000;        // Initial retry delay (ms)
+const API_CALL_QUOTA_LIMIT = 50;         // Max calls per minute
+```
+
+### File upload limits
+
+Configure upload settings in `server.js:76-80`:
+
+```javascript server.js
+const upload = multer({ 
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }  // 5MB limit
+});
+```
+
+### Monitoring interval
+
+Adjust screen capture frequency in `public/index.html:994`:
+
+```javascript index.html
+const MONITORING_INTERVAL = 5000;  // 5 seconds between captures
+```
+
+## Security considerations
+
+Screen Answerer includes several security features:
+
+<CardGroup cols={2}>
+  <Card title="Helmet.js" icon="shield">
+    Content Security Policy headers to prevent XSS attacks
+    
+    Configured in server.js:18-29
+  </Card>
+  <Card title="CORS" icon="globe">
+    Cross-origin resource sharing controls
+    
+    Configured in server.js:30-34
+  </Card>
+  <Card title="Rate limiting" icon="gauge">
+    Global and per-IP rate limits
+    
+    100 requests per 15 minutes
+  </Card>
+  <Card title="File validation" icon="file-check">
+    Image-only uploads with size limits
+    
+    Max 5MB per file
+  </Card>
+</CardGroup>
+
+### Content Security Policy
+
+The application enforces strict CSP headers:
+
+```javascript server.js
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "https://generativelanguage.googleapis.com"],
+    },
+  },
+}));
+```
+
+## Supported browsers
+
+Screen Answerer works best with modern browsers:
+
+| Browser | Screen Monitoring | File Upload | Notes |
+|---------|------------------|-------------|-------|
+| Chrome | ✅ Excellent | ✅ Yes | Recommended |
+| Firefox | ✅ Excellent | ✅ Yes | Recommended |
+| Edge | ⚠️ Good | ✅ Yes | Some limitations |
+| Safari | ⚠️ Limited | ✅ Yes | Screen capture may not work |
+
+<Warning>
+  Screen monitoring requires the `getDisplayMedia` API, which may not be available in all browsers or may require HTTPS in production.
+</Warning>
+
+## Running in production
+
+For production deployments:
+
+<Steps>
+  <Step title="Use a process manager">
+    Keep the server running with PM2:
+
+    ```bash
+    npm install -g pm2
+    pm2 start server.js --name screen-answerer
+    pm2 save
+    pm2 startup
+    ```
+  </Step>
+
+  <Step title="Set up reverse proxy">
+    Use Nginx to proxy requests:
+
+    ```nginx nginx.conf
+    server {
+      listen 80;
+      server_name your-domain.com;
+
+      location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Enable HTTPS">
+    Screen capture requires HTTPS in production. Use Let's Encrypt:
+
+    ```bash
+    sudo certbot --nginx -d your-domain.com
+    ```
+  </Step>
+
+  <Step title="Configure environment">
+    Set production environment variables:
+
+    ```bash
+    export NODE_ENV=production
+    export PORT=3000
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting installation
+
+<AccordionGroup>
+  <Accordion title="npm install fails">
+    **Common causes**:
+    - Outdated Node.js version
+    - Network connectivity issues
+    - Permission errors
+
+    **Solutions**:
+    ```bash
+    # Update Node.js to latest LTS
+    nvm install --lts
+    
+    # Clear npm cache
+    npm cache clean --force
+    
+    # Install with verbose logging
+    npm install --verbose
+    ```
+  </Accordion>
+
+  <Accordion title="Port already in use">
+    **Error**: `EADDRINUSE: address already in use :::3000`
+
+    **Solutions**:
+    ```bash
+    # Find and kill the process
+    lsof -ti:3000 | xargs kill
+    
+    # Or use a different port
+    PORT=3001 npm start
+    ```
+
+    The server will automatically try the next port, but you may want to specify one manually.
+  </Accordion>
+
+  <Accordion title="Module not found errors">
+    **Error**: `Cannot find module '@google/generative-ai'`
+
+    **Solutions**:
+    ```bash
+    # Reinstall all dependencies
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
+  </Accordion>
+
+  <Accordion title="Permission denied errors">
+    **Error**: `EACCES: permission denied`
+
+    **Solutions**:
+    ```bash
+    # Fix npm permissions (Linux/Mac)
+    sudo chown -R $USER ~/.npm
+    sudo chown -R $USER node_modules
+    
+    # Or use a Node version manager (recommended)
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Updating Screen Answerer
+
+To update to the latest version:
+
+```bash
+# Pull latest changes
+git pull origin main
+
+# Update dependencies
+npm install
+
+# Restart the server
+npm start
+```
+
+<Tip>
+  Your API key configuration is stored in browser local storage, so it won't be affected by updates.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Configure your API key and answer your first question
+  </Card>
+  <Card
+    title="Configuration"
+    icon="gear"
+    href="/configuration/api-key-setup"
+  >
+    Explore advanced configuration options
+  </Card>
+</CardGroup>
